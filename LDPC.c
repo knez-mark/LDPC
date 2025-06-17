@@ -20,6 +20,14 @@ static const uint8_t columnIndexMap [NUM_EDGES] = {0, 1, 2, 3, 5, 6, 9, 10, 11, 
                                                    12, 16, 21, 22, 27, 0, 6, 10, 11, 13, 17, 18, 20, 28, 0, 1, 4, 7, 8, 14, 29, 0, 1, 3, 12, 16, 19, 
                                                    21, 22, 24, 30, 0, 1, 10, 11, 13, 17, 18, 20, 31, 1, 2, 4, 7, 8, 14, 32, 0, 1, 12, 16, 21, 22, 23, 33};
 
+// For "D" matrix
+static const uint8_t D_matrix_base_graph [] = {115, 241, 90, 252, 22};
+
+static const uint16_t D_matrix_rowOffset [] = {0, 0, 1, 1, 1, 3, 3, 3};
+
+static const uint8_t D_matrix_rowWeight [] = {0, 1, 0, 0, 2, 0, 0, 2};
+
+static const uint8_t D_matrix_columnIndexMap [] = {0, 0, 2, 0, 1};
 //Original base graph
 /*
 static const uint8_t base_graph [NUM_EDGES] = {250, 69, 226, 159, 100, 10, 59, 229, 110, 191, 9, 195, 23, 190, 35, 239, 31, 1, 0, 
@@ -57,12 +65,38 @@ static const uint8_t columnIndexMap [NUM_EDGES] = {0, 1, 2, 3, 5, 6, 9, 10, 11, 
                                                    0, 12, 14, 24, 54, 1, 2, 11, 21, 55, 0, 7, 15, 17, 56, 1, 6, 12, 22, 57, 0, 14, 15, 18, 58, 1, 13, 23, 59, 
                                                    0, 9, 10, 12, 60, 1, 3, 7, 19, 61, 0, 8, 17, 62, 1, 3, 9, 18, 63, 0, 4, 24, 64, 1, 16, 18, 25, 65, 
                                                    0, 7, 9, 22, 66, 1, 6, 10, 67};
+
+// For "D" matrix
+static const uint8_t D_matrix_base_graph [] = {115, 241, 90, 252, 22, 62, 179, 154, 160, 222, 6, 9, 172, 61, 121, 103, 122, 137, 139, 173};
+
+static const uint16_t D_matrix_rowOffset [] = {0, 0, 1, 1, 1, 3, 3, 3, 5, 5, 6, 6, 7, 8, 8, 8, 8, 9, 9, 9, 9, 10, 10, 10,
+                                              10, 10, 11, 12, 14, 15, 15, 15, 16, 16, 17, 17, 17, 17, 17, 18, 19, 20};
+
+static const uint8_t D_matrix_rowWeight [] = {0, 1, 0, 0, 2, 0, 0, 2, 0, 1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 
+                                              0, 1, 1, 2, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0};
+
+static const uint8_t D_matrix_columnIndexMap [] = {0, 0, 2, 0, 1, 1, 3, 0, 0, 0, 3, 2, 0, 3, 2, 0, 1, 2, 3, 0};
 */
 
 static quasi_cyclic_matrix_t H;
+static quasi_cyclic_matrix_t A;
+static quasi_cyclic_matrix_t C;
+static quasi_cyclic_matrix_t D;
 
 quasi_cyclic_matrix_t* get_H () {
     return &H;
+}
+
+quasi_cyclic_matrix_t* get_A () {
+    return &A;
+}
+
+quasi_cyclic_matrix_t* get_C () {
+    return &C;
+}
+
+quasi_cyclic_matrix_t* get_D () {
+    return &D;
 }
 
 void LDPC_init () {
@@ -74,4 +108,31 @@ void LDPC_init () {
     H.rowOffset = rowOffset;
     H.rowWeight = rowWeight;
     H.columnIndexMap = columnIndexMap;
+
+    A.rows = 4;
+    A.cols = 22;
+    A.lifting_size = MAX_LIFTING_SIZE; //Subject to change
+    
+    A.base_graph = base_graph;
+    A.rowOffset = rowOffset;
+    A.rowWeight = rowWeight;
+    A.columnIndexMap = columnIndexMap;
+
+    C.rows = BG1_ROWS - 4;
+    C.cols = 22;
+    C.lifting_size = MAX_LIFTING_SIZE; //Subject to change
+    
+    C.base_graph = base_graph;
+    C.rowOffset = rowOffset + 4;
+    C.rowWeight = rowWeight + 4;
+    C.columnIndexMap = columnIndexMap;
+
+    D.rows = BG1_ROWS - 4;
+    D.cols = 4;
+    D.lifting_size = MAX_LIFTING_SIZE; //Subject to change
+    
+    D.base_graph = D_matrix_base_graph;
+    D.rowOffset = D_matrix_rowOffset;
+    D.rowWeight = D_matrix_rowWeight;
+    D.columnIndexMap = D_matrix_columnIndexMap;
 }

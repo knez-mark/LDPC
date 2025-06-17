@@ -27,6 +27,9 @@ typedef struct{
 }float_struct;
 
 quasi_cyclic_matrix_t* get_H ();
+quasi_cyclic_matrix_t* get_A ();
+quasi_cyclic_matrix_t* get_C ();
+quasi_cyclic_matrix_t* get_D ();
 
 void LDPC_init ();
 
