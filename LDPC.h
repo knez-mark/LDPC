@@ -7,6 +7,7 @@
 #define ALPHA 0.75
 
 #define MAX_LIFTING_SIZE 32
+#define CODEWORD_SIZE 32
 
 //"Condensed" base graph
 #define NUM_EDGES 137
@@ -33,6 +34,7 @@ quasi_cyclic_matrix_t* get_D ();
 
 void LDPC_init ();
 
+void LDPC_encode (uint8_t * data, uint16_t len, uint8_t * parity);
 uint8_t LDPC_decode (float * Lq, uint16_t len, uint8_t * decoded, uint16_t max_iters, uint16_t * num_iters);
 
 #endif /* LDPC_H_ */
