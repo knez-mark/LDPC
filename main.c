@@ -120,6 +120,7 @@ int main () {
         }
         printf ("%d, ", encoded [i]);
     }
+    printf ("\r\n");
 
     //Use below for "condensed" codeword
     for (int i =0; i < BG1_COLS*CODEWORD_SIZE/32; i++) {

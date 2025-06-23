@@ -6,7 +6,6 @@
 typedef struct {
     uint8_t rows;
     uint8_t cols;
-    uint8_t lifting_size;
 
     const uint8_t *base_graph;
     struct {
@@ -23,7 +22,7 @@ typedef union{
 } vector_t;
 
 uint8_t find_vector_weight (vector_t x, uint8_t len);
-void vector_add (vector_t x, vector_t y, vector_t result, uint8_t lifting_size, uint16_t length);
-void circular_matrix_multiply (quasi_cyclic_matrix_t * H, vector_t x, vector_t b);
+void vector_add (vector_t x, vector_t y, vector_t result, uint16_t length);
+void circular_matrix_multiply (quasi_cyclic_matrix_t * H, vector_t x, vector_t b, uint8_t lifting_size);
 
 #endif /* MATRIX_H_ */

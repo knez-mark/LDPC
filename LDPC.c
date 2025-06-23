@@ -102,7 +102,6 @@ quasi_cyclic_matrix_t* get_D () {
 void LDPC_init () {
     H.rows = BG1_ROWS;
     H.cols = BG1_COLS;
-    H.lifting_size = MAX_LIFTING_SIZE; //Subject to change
     
     H.base_graph = base_graph;
     H.rowOffset = rowOffset;
@@ -111,7 +110,6 @@ void LDPC_init () {
 
     A.rows = 4;
     A.cols = 22;
-    A.lifting_size = MAX_LIFTING_SIZE; //Subject to change
     
     A.base_graph = base_graph;
     A.rowOffset = rowOffset;
@@ -120,7 +118,6 @@ void LDPC_init () {
 
     C.rows = BG1_ROWS - 4;
     C.cols = 22;
-    C.lifting_size = MAX_LIFTING_SIZE; //Subject to change
     
     C.base_graph = base_graph;
     C.rowOffset = rowOffset + 4;
@@ -129,7 +126,6 @@ void LDPC_init () {
 
     D.rows = BG1_ROWS - 4;
     D.cols = 4;
-    D.lifting_size = MAX_LIFTING_SIZE; //Subject to change
     
     D.base_graph = D_matrix_base_graph;
     D.rowOffset = D_matrix_rowOffset;

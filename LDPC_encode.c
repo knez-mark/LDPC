@@ -1,14 +1,13 @@
 #include "LDPC.h"
-#include <stdio.h>
 
-void mult_by_B_inv (vector_t input, vector_t result) {
-    if (get_A()->lifting_size == 32) {
+void mult_by_B_inv (vector_t input, vector_t result, uint8_t lifting_size) {
+    if (lifting_size == 32) {
         result.data32 [0] = input.data32 [0] ^ input.data32 [1] ^ input.data32 [2] ^ input.data32 [3];
         result.data32 [1] = input.data32 [0] ^ ((result.data32 [0] >> 1) | (result.data32 [0] << 31));
         result.data32 [3] = input.data32 [3] ^ ((result.data32 [0] >> 1) | (result.data32 [0] << 31));
         result.data32 [2] = input.data32 [2] ^ result.data32 [3];
     }
-    else if (get_A()->lifting_size == 16) {
+    else if (lifting_size == 16) {
         result.data16 [0] = input.data16 [0] ^ input.data16 [1] ^ input.data16 [2] ^ input.data16 [3];
         result.data16 [1] = input.data16 [0] ^ ((result.data16 [0] >> 1) | (result.data16 [0] << 15));
         result.data16 [3] = input.data16 [3] ^ ((result.data16 [0] >> 1) | (result.data16 [0] << 15));
@@ -22,16 +21,15 @@ void mult_by_B_inv (vector_t input, vector_t result) {
     }
 }
 
-void LDPC_encode (uint8_t * data, uint16_t len, uint8_t * parity) {
+uint8_t LDPC_encode (uint8_t * data, uint16_t len, uint8_t * parity) {
     //Encoding algorithm taken from "Low-Latency QC-LDPC Encoder Design for 5G NR"
     //by Tian et al.
 
     uint8_t lifting_size = len/get_H()->cols;
 
-    get_H()->lifting_size = lifting_size;
-    get_A()->lifting_size = lifting_size;
-    get_C()->lifting_size = lifting_size;
-    get_D()->lifting_size = lifting_size;
+    if (!(lifting_size == 32 || lifting_size == 16 || lifting_size == 8)) {
+        return 0;
+    }
 
     //Maximum size is 4 * 32 bits
     uint8_t A_mult_S [4*4] = {0};
@@ -39,16 +37,18 @@ void LDPC_encode (uint8_t * data, uint16_t len, uint8_t * parity) {
 
     uint8_t D_mult_P1 [8*4] = {0};
     uint8_t C_mult_S [8*4] = {0};
-    uint8_t * P2 = parity + 4*4*lifting_size/MAX_LIFTING_SIZE;
+    uint8_t * P2 = parity + 4*lifting_size/MIN_LIFTING_SIZE;
 
     // 1) Multiply A with S
-    circular_matrix_multiply (get_A(), (vector_t) data, (vector_t) A_mult_S);
+    circular_matrix_multiply (get_A(), (vector_t) data, (vector_t) A_mult_S, lifting_size);
     // 2) Find B^-1 * (A * S) to obtain P1
-    mult_by_B_inv ((vector_t) A_mult_S, (vector_t) P1);
+    mult_by_B_inv ((vector_t) A_mult_S, (vector_t) P1, lifting_size);
     // 3) Multiply D with P1
-    circular_matrix_multiply (get_D(), (vector_t) P1, (vector_t) D_mult_P1);
+    circular_matrix_multiply (get_D(), (vector_t) P1, (vector_t) D_mult_P1, lifting_size);
     // 4) Multiply C with S
-    circular_matrix_multiply (get_C(), (vector_t) data, (vector_t) C_mult_S);
+    circular_matrix_multiply (get_C(), (vector_t) data, (vector_t) C_mult_S, lifting_size);
     // 5) Add the results from 3) and 4)
-    vector_add ((vector_t) D_mult_P1, (vector_t) C_mult_S, (vector_t) P2, lifting_size, 8);
+    vector_add ((vector_t) D_mult_P1, (vector_t) C_mult_S, (vector_t) P2, get_C()->rows*lifting_size/MIN_LIFTING_SIZE);
+
+    return 1;
 }

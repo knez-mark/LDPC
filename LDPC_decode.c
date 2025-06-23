@@ -1,5 +1,4 @@
 #include <stdint.h>
-#include <stdio.h>
 #include <string.h>
 #include "LDPC.h"
 #include "matrix.h"
@@ -36,13 +35,15 @@ static void get_hard_decision_codeword (float * Lq, uint16_t len, uint8_t liftin
 
 static uint8_t check_syndrome (float * Lq, uint16_t len, quasi_cyclic_matrix_t * H, uint8_t * codeword) {
 
+    uint8_t lifting_size = len/H->cols;
+
     uint8_t syndrome [MAX_CODE_LEN] = {0};
     memset (syndrome, 0, MAX_CODE_LEN);
     memset (codeword, 0, MAX_CODE_LEN*8);
 
-    get_hard_decision_codeword (Lq, len, H->lifting_size, (vector_t) codeword);
+    get_hard_decision_codeword (Lq, len, lifting_size, (vector_t) codeword);
 
-    circular_matrix_multiply (H, (vector_t) codeword, (vector_t) syndrome);
+    circular_matrix_multiply (H, (vector_t) codeword, (vector_t) syndrome, lifting_size);
 
     return find_vector_weight ((vector_t) syndrome, len); //Returns number of parity check equation failures
 }
@@ -51,9 +52,9 @@ uint8_t LDPC_decode (float * Lq, uint16_t len, uint8_t * decoded, uint16_t max_i
 
     quasi_cyclic_matrix_t * H = get_H ();
 
-    H->lifting_size = len/H->cols;
+    uint8_t lifting_size = len/H->cols;
 
-    if (!(H->lifting_size == 32 || H->lifting_size == 16 || H->lifting_size == 8)) {
+    if (!(lifting_size == 32 || lifting_size == 16 || lifting_size == 8)) {
         return 0;
     }
 
