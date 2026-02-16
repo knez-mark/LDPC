@@ -1,4 +1,5 @@
 #include "matrix.h"
+#include <float.h>
 
 //All 64 possible codewords for a [32, 6] linear block code
 static uint32_t codewords[64] = {
@@ -18,7 +19,7 @@ uint32_t len_field_encode(uint8_t msg)
     return codewords[msg];
 }
 
-uint8_t len_field_decode(uint32_t codeword)
+uint32_t len_field_decode(uint32_t codeword)
 {
     uint8_t best = 1;
     uint8_t best_dist = 32;
@@ -33,5 +34,25 @@ uint8_t len_field_decode(uint32_t codeword)
             if (d == 0) break;
         }
     }
-    return best;
+    return codewords[best];
+}
+
+uint32_t len_field_decode_soft(float* llr)
+{
+    uint8_t best = 1;
+    float best_dist = FLT_MAX;
+
+    for (uint8_t msg = 1; msg < 64; msg++) {
+        float d = 0;
+        for (uint8_t bit = 0; bit < 32; bit++) {
+            uint8_t b = (codewords[msg] >> bit) & 1;
+            d += b ? llr[bit]: -llr[bit];
+        }
+
+        if (d < best_dist) {
+            best_dist = d;
+            best = msg;
+        }
+    }
+    return codewords[best];
 }

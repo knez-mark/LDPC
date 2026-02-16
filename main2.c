@@ -28,14 +28,21 @@ static void print_5bits(uint32_t value)
 int main() {
     LDPC_init ();
     
+    float noise_stddev = 0.5f;
+
     srand((unsigned)time(NULL));
 
     /* Static, zero-initialized struct */
     static message_t message = {0};
 
     static encoded_t encoding = {0};
+    static encoded_t decoding = {0};
 
     static uint8_t parity [48] = {0};
+
+    static float bpsk_symbols [32+128*8] = {0};
+    
+    static float ldpc_llr [136*8] = {0};
 
     /* Generate random message size: 0–87 */
     message.msg_size = rand_u8_range(0, 87);
@@ -55,6 +62,7 @@ int main() {
     print_5bits(encoding.length_field);
     printf("\n");
 
+    /*
     for (int i = 0; i < message.msg_size + 1; i++) {
         if (i == 0) {
             printf ("%x, ", message.msg_size);
@@ -66,15 +74,51 @@ int main() {
             printf ("\n");
         }
     }
+    */
 
-    printf ("\n\n");
+    //printf ("\n\n");
 
-    for (int i = 0; i < 32*(1 + ((encoding.length_field >> 3) & 0x03)); i++) {
+    /*
+    for (int i = 0; i < get_frame_len (encoding.length_field) - 4; i++) {
         printf ("%x, ", encoding.ldpc [i]);
         if ((i+1) % 8 == 0) {
             printf ("\n");
         }
     }
+    */
+
+    uint16_t num_bytes = get_frame_len (encoding.length_field);
+    uint16_t num_bits = bytes_to_bpsk((uint8_t*) &encoding, num_bytes, bpsk_symbols);
+    add_awgn(bpsk_symbols, num_bits, noise_stddev);
+
+    /*
+    for (int i = 32; i < num_bits; i++) {
+        printf ("%5.2f, ", bpsk_symbols [i]);
+        if ((i+1) % 8 == 0) {
+            printf ("\n");
+        }
+    }
+    */
+
+    decoding.length_field = len_field_decode_soft (bpsk_symbols);
+
+    //printf("length_field  = %x\n", decoding.length_field);
+    //printf ("\n");
+
+    format_decoded_data(bpsk_symbols + 32, ldpc_llr, decoding.length_field);
+
+    /*
+    for (int i = 0; i < get_LDPC_len(encoding.length_field); i++) {
+        printf ("%5.2f, ", ldpc_llr [i]);
+        if ((i+1) % 8 == 0) {
+            printf ("\n");
+        }
+    }
+    */
+
+    uint16_t num_iters;
+    printf ("parity_check_errors: %d\n", LDPC_decode (ldpc_llr, get_LDPC_len(decoding.length_field), decoding.ldpc, 50, &num_iters));
+    printf ("num_iters: %d\n", num_iters);
 
     return 0;
 }

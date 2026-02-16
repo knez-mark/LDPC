@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 uint32_t len_field_encode(uint8_t msg);
-uint8_t len_field_decode(uint32_t codeword);
+uint32_t len_field_decode(uint32_t codeword);
+uint32_t len_field_decode_soft(float* llr);
 
 #endif /* LENGTH_FIELD_H_ */
