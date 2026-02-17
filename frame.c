@@ -101,6 +101,10 @@ void format_encoded_data(
     uint8_t offset   = map_offset(base_len);
     uint8_t end_range = base_len - 22 + map_last_three_bits(length_field & 0x07);
 
+    if ((map_first_two_bits((length_field >> 3) & 0x03) == 22) && (map_last_three_bits(length_field & 0x07) <= 13)) {
+        offset = 0;
+    }
+
     /* Determine encoded length (bytes) */
     uint16_t encoded_bytes;
     uint8_t parity_bytes;
@@ -169,6 +173,10 @@ void format_decoded_data(
     uint8_t base_len = map_first_two_bits((length_field >> 3) & 0x03);
     uint8_t offset   = map_offset(base_len);
     uint8_t end_range = base_len - 22 + map_last_three_bits(length_field & 0x07);
+
+    if ((map_first_two_bits((length_field >> 3) & 0x03) == 22) && (map_last_three_bits(length_field & 0x07) <= 13)) {
+        offset = 0;
+    }
 
     /* Determine encoded length (bytes) */
     uint16_t encoded_bytes;
