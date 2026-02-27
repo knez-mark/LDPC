@@ -1,6 +1,11 @@
 #include "minsum.h"
+#include <string.h>
 
 static float_struct R_mj [NUM_EDGES] = {0};
+
+void reset_minsum () {
+    memset (R_mj, 0, sizeof(R_mj));
+}
 
 static float sign (float in) {
     if (in > 0) {

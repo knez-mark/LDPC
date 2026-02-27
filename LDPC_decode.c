@@ -71,6 +71,8 @@ uint8_t LDPC_decode (float * Lq, uint16_t len, uint8_t * decoded, uint16_t max_i
         layered_normalized_minsum (Lq, len, H);
     }
 
+    reset_minsum ();
+    
     *num_iters = iters;
     return parity_check_errors;
 }

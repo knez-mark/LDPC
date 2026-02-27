@@ -5,6 +5,16 @@
 
 #define MSG_SIZE_MAX 88
 
+typedef struct {
+    uint8_t  msg_size;
+    uint8_t  msg[255];
+} message_t;
+
+typedef struct {
+    uint32_t length_field;
+    uint8_t  ldpc[128];
+} encoded_t;
+
 uint16_t get_LDPC_len (uint32_t len_field);
 uint16_t get_frame_len (uint32_t len_field);
 uint32_t generate_length_field(uint8_t msg_size);
