@@ -30,14 +30,14 @@ int main() {
     static encoded_t encoding = {0};
     static encoded_t decoding = {0};
 
-    static uint8_t parity [48] = {0};
+    static uint8_t parity [272] = {0};
 
     static float bpsk_symbols [32+128*8] = {0};
     
-    static float ldpc_llr [136*8] = {0};
+    static float ldpc_llr [68*32] = {0};
 
     //Generate random message size: 0–87
-    message.msg_size = rand_u8_range(0, 87);
+    message.msg_size = 21;//rand_u8_range(0, 87);
 
     //Fill message payload
     generate_random_bytes(message.msg, message.msg_size);

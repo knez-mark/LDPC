@@ -1,5 +1,6 @@
 #include "minsum.h"
 #include <string.h>
+#include <stdio.h>
 
 static float_struct R_mj [NUM_EDGES] = {0};
 
@@ -41,6 +42,15 @@ static void min2 (float * arr, uint8_t size, float * v1, float * v2, uint8_t * i
 void layered_normalized_minsum (float * Lq, uint16_t len, quasi_cyclic_matrix_t * H) {
 
 	uint8_t lifting_size = len/H->cols;
+
+    //for (int i = NUM_EDGES - 3; i < NUM_EDGES; i++) {
+        //for (int j = 0; j < lifting_size; j++) {
+            //if (R_mj[i].element[j] != 0) {
+                //printf ("i=%d, j=%d, %f\n", i, j, R_mj[i].element[j]);
+            //}
+        //}
+    //}
+    //printf ("\n");
 
 	for (int m = 0; m < BG1_ROWS; m++) {
 		static uint16_t temp_arr [MAX_ROW_WEIGHT]= {0};
@@ -102,14 +112,5 @@ void layered_normalized_minsum (float * Lq, uint16_t len, quasi_cyclic_matrix_t 
             }
         }
     }
-
-    //for (int i = 0; i < NUM_EDGES; i++) {
-    //    for (int j = 0; j < lifting_size; j++) {
-    //        if (R_mj[i].element[j] != 0) {
-                //printf ("i=%d, j=%d, %f\n", i, j, R_mj[i].element[j]);
-    //        }
-    //    }
-    //}
-    //printf ("\n");
 
 }

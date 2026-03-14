@@ -12,7 +12,7 @@ typedef struct {
 
 typedef struct {
     uint32_t length_field;
-    uint8_t  ldpc[128];
+    uint8_t  ldpc[272];
 } encoded_t;
 
 uint16_t get_LDPC_len (uint32_t len_field);

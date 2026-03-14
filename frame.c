@@ -5,6 +5,18 @@
 uint16_t get_LDPC_len (uint32_t len_field) {
     uint8_t bits = (len_field >> 3) & 0x03;
     switch (bits) {
+        case 0: return 544;
+        case 1: return 544*2;
+        case 2:
+        case 3:
+            return 544*4;
+        default: return 544*4;
+    }
+}
+
+static uint16_t get_frame_LDPC_len (uint32_t len_field) {
+    uint8_t bits = (len_field >> 3) & 0x03;
+    switch (bits) {
         case 0: return 272;
         case 1: return 272*2;
         case 2:
@@ -208,7 +220,7 @@ void format_decoded_data(
             return;
     }
 
-    uint16_t LPDC_len = get_LDPC_len (length_field);
+    uint16_t LPDC_len = get_frame_LDPC_len (length_field);
 
     /* Clear output buffer */
     for (uint16_t i = 0; i < LPDC_len; i++) {

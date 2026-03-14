@@ -32,11 +32,11 @@ uint8_t LDPC_encode (uint8_t * data, uint16_t len, uint8_t * parity) {
     }
 
     //Maximum size is 4 * 32 bits
-    uint8_t A_mult_S [4*4] = {0};
+    uint8_t A_mult_S [4*MAX_LIFTING_SIZE/MIN_LIFTING_SIZE] = {0};
     uint8_t * P1 = parity;
 
-    uint8_t D_mult_P1 [8*4] = {0};
-    uint8_t C_mult_S [8*4] = {0};
+    uint8_t D_mult_P1 [(BG1_COLS-4)*MAX_LIFTING_SIZE/MIN_LIFTING_SIZE] = {0};
+    uint8_t C_mult_S [(BG1_COLS-4)*MAX_LIFTING_SIZE/MIN_LIFTING_SIZE] = {0};
     uint8_t * P2 = parity + 4*lifting_size/MIN_LIFTING_SIZE;
 
     // 1) Multiply A with S

@@ -5,7 +5,7 @@
 
 #define MAX_TRANSMISSIONS 100000000
 #define TARGET_ERRORS 1000
-#define LDPC_NUM_ITERS 20
+#define LDPC_NUM_ITERS 5
 
 uint8_t rand_u8_range(uint8_t min, uint8_t max);
 uint8_t generate_random_bytes(uint8_t *buffer, uint16_t size);

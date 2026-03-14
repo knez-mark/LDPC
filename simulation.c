@@ -51,7 +51,8 @@ static float randn(void) {
 
 void add_awgn(float *symbols, uint16_t len, float noise_stddev) {
     for (uint16_t i = 0; i < len; i++) {
-        symbols[i] += noise_stddev * randn();
+        symbols[i] += noise_stddev*randn();
+        symbols[i] *= 2/(noise_stddev*noise_stddev)/500;
     }
 }
 
@@ -80,41 +81,80 @@ float find_bit_error_rate (uint8_t msg_len, float noise_stddev) {
         static encoded_t encoding = {0};
         static encoded_t decoding = {0};
 
-        static uint8_t parity [48] = {0};
+        static uint8_t parity [272] = {0};
 
-        static float bpsk_symbols [32+128*8] = {0};
+        static float bpsk_symbols [272*8] = {0};
         
-        static float ldpc_llr [136*8] = {0};
-
         memset (&message, 0, sizeof (message_t));
         memset (&encoding, 0, sizeof (encoded_t));
         memset (&decoding, 0, sizeof (encoded_t));
         memset (parity, 0, sizeof (parity));
         memset (bpsk_symbols, 0, sizeof (bpsk_symbols));
-        memset (ldpc_llr, 0, sizeof (ldpc_llr));
 
         //Generate message
         message.msg_size = msg_len;
         generate_random_bytes(message.msg, message.msg_size);
-        encoding.length_field = generate_length_field(message.msg_size + 1);
+
+        uint8_t LDPC_msg_size;
+        uint8_t LDPC_parity_size;
+        uint16_t num_bytes;
+        uint8_t lifting_size;
+
+        if (message.msg_size == 0) {
+            LDPC_msg_size = 2;
+            num_bytes = 68;
+            lifting_size = 8;
+        }
+        else if (message.msg_size < 22) {
+            LDPC_msg_size = message.msg_size + 1;
+            num_bytes = 68;
+            lifting_size = 8;
+        }
+        else if (message.msg_size < 44) {
+            LDPC_msg_size = message.msg_size + 1;
+            num_bytes = 68*2;
+            lifting_size = 16;
+        }
+        else {
+            LDPC_msg_size = message.msg_size + 1;
+            num_bytes = 68*4;
+            lifting_size = 32;
+        }
+        LDPC_parity_size = 34*lifting_size/MIN_LIFTING_SIZE - LDPC_msg_size;
 
         //Encode data
-        LDPC_encode ((uint8_t *) &message, get_LDPC_len(encoding.length_field), parity);
-        format_encoded_data((uint8_t *) &message, parity, encoding.ldpc, encoding.length_field);
+        LDPC_encode ((uint8_t *) &message, num_bytes*8, parity);
+
+        encoding.ldpc[0] = message.msg_size;
+        for (int i = 0; i < 22*lifting_size/MIN_LIFTING_SIZE - 1; i++) {
+            encoding.ldpc[1+i] = message.msg[i];
+        }
+        for (int i = 0; i < LDPC_parity_size; i++) {
+            encoding.ldpc[22*lifting_size/MIN_LIFTING_SIZE+i] = parity [i];
+        }
 
         //Transmit through channel
-        uint16_t num_bytes = get_frame_len (encoding.length_field);
-        uint16_t num_bits = bytes_to_bpsk((uint8_t*) &encoding, num_bytes, bpsk_symbols);
+        uint16_t num_bits = bytes_to_bpsk(encoding.ldpc, num_bytes, bpsk_symbols);
         add_awgn(bpsk_symbols, num_bits, noise_stddev);
 
+        for (int i = 0; i < 2*lifting_size; i++) {
+            bpsk_symbols [i] = 0;
+        }
+
+        for (int i = 8*(message.msg_size + 1); i < lifting_size*(22); i++) {
+            bpsk_symbols [i] = 10.0f;
+        }
+
+        for (int i = 8*num_bytes - lifting_size*(BG1_COLS - 22) + 8*LDPC_parity_size; i < 8*num_bytes; i++) {
+            bpsk_symbols [i] = 0;
+        }
+
         //Decode message
-        decoding.length_field = len_field_decode_soft (bpsk_symbols);
-        format_decoded_data(bpsk_symbols + 32, ldpc_llr, decoding.length_field);
-        LDPC_decode (ldpc_llr, get_LDPC_len(decoding.length_field), decoding.ldpc, LDPC_NUM_ITERS, &num_iters);
+        LDPC_decode (bpsk_symbols, num_bytes*8, decoding.ldpc, LDPC_NUM_ITERS, &num_iters);
 
         //Calculate BER
-        bit_errors += calculate_bit_errors ((uint8_t*) &message, decoding.ldpc, message.msg_size + 1);
-        num_transmissions += 8*(message.msg_size + 1);
+        bit_errors += calculate_bit_errors ((uint8_t*) &message, decoding.ldpc, LDPC_msg_size);
+        num_transmissions += 8*(LDPC_msg_size);
     }
 
     return (float)bit_errors/num_transmissions;

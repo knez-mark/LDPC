@@ -2,6 +2,7 @@
 #include "matrix.h"
 
 //"Condensed" base graph
+/*
 static const uint8_t base_graph [NUM_EDGES] = {250, 69, 226, 159, 100, 10, 59, 229, 110, 191, 9, 195, 23, 190, 35, 239, 31, 1, 0, 
                                                2, 239, 117, 124, 71, 222, 104, 173, 220, 102, 109, 132, 142, 155, 255, 28, 0, 0, 0, 
                                                106, 111, 185, 63, 117, 93, 229, 177, 95, 39, 142, 225, 225, 245, 205, 251, 117, 0, 0, 
@@ -28,8 +29,10 @@ static const uint16_t D_matrix_rowOffset [] = {0, 0, 1, 1, 1, 3, 3, 3};
 static const uint8_t D_matrix_rowWeight [] = {0, 1, 0, 0, 2, 0, 0, 2};
 
 static const uint8_t D_matrix_columnIndexMap [] = {0, 0, 2, 0, 1};
+*/
+
 //Original base graph
-/*
+
 static const uint8_t base_graph [NUM_EDGES] = {250, 69, 226, 159, 100, 10, 59, 229, 110, 191, 9, 195, 23, 190, 35, 239, 31, 1, 0, 
                                                2, 239, 117, 124, 71, 222, 104, 173, 220, 102, 109, 132, 142, 155, 255, 28, 0, 0, 0, 
                                                106, 111, 185, 63, 117, 93, 229, 177, 95, 39, 142, 225, 225, 245, 205, 251, 117, 0, 0, 
@@ -76,7 +79,6 @@ static const uint8_t D_matrix_rowWeight [] = {0, 1, 0, 0, 2, 0, 0, 2, 0, 1, 0, 1
                                               0, 1, 1, 2, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0};
 
 static const uint8_t D_matrix_columnIndexMap [] = {0, 0, 2, 0, 1, 1, 3, 0, 0, 0, 3, 2, 0, 3, 2, 0, 1, 2, 3, 0};
-*/
 
 static quasi_cyclic_matrix_t H;
 static quasi_cyclic_matrix_t A;
