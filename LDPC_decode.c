@@ -69,7 +69,11 @@ uint8_t LDPC_decode (float * Lq, uint16_t len, uint8_t * decoded, uint16_t max_i
             break;
         }
 
-        layered_normalized_minsum (Lq, len, H);
+        #if USE_SUM_PRODUCT
+            layered_sum_product (Lq, len, H);
+        #else
+            layered_normalized_minsum (Lq, len, H);
+        #endif
     }
 
     reset_minsum ();

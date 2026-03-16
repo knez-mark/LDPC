@@ -52,7 +52,7 @@ static float randn(void) {
 void add_awgn(float *symbols, uint16_t len, float noise_stddev) {
     for (uint16_t i = 0; i < len; i++) {
         symbols[i] += noise_stddev*randn();
-        symbols[i] *= 2/(noise_stddev*noise_stddev)/500;
+        symbols[i] *= 2/(noise_stddev*noise_stddev);
     }
 }
 
