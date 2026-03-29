@@ -11,16 +11,18 @@
 #define CODEWORD_SIZE 32
 
 //"Condensed" base graph
+/*
 #define NUM_EDGES 137
 #define BG1_ROWS 12
 #define BG1_COLS 34
 #define MAX_CODE_LEN BG1_COLS*MAX_LIFTING_SIZE/8 //In bytes
+*/
 
 //Original base graph
-//#define NUM_EDGES 316
-//#define BG1_ROWS 46
-//#define BG1_COLS 68
-//#define MAX_CODE_LEN BG1_COLS*MAX_LIFTING_SIZE/8 //In bytes
+#define NUM_EDGES 316
+#define BG1_ROWS 46
+#define BG1_COLS 68
+#define MAX_CODE_LEN BG1_COLS*MAX_LIFTING_SIZE/8 //In bytes
 
 #define MAX_ROW_WEIGHT 19
 

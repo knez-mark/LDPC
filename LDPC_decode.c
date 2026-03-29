@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 #include "LDPC.h"
 #include "matrix.h"
@@ -39,7 +40,7 @@ static uint8_t check_syndrome (float * Lq, uint16_t len, quasi_cyclic_matrix_t *
 
     uint8_t syndrome [MAX_CODE_LEN] = {0};
     memset (syndrome, 0, MAX_CODE_LEN);
-    memset (codeword, 0, MAX_CODE_LEN*8);
+    memset (codeword, 0, MAX_CODE_LEN);
 
     get_hard_decision_codeword (Lq, len, lifting_size, (vector_t) codeword);
 
@@ -68,7 +69,11 @@ uint8_t LDPC_decode (float * Lq, uint16_t len, uint8_t * decoded, uint16_t max_i
             break;
         }
 
-        layered_normalized_minsum (Lq, len, H);
+        #if USE_SUM_PRODUCT
+            layered_sum_product (Lq, len, H);
+        #else
+            layered_normalized_minsum (Lq, len, H);
+        #endif
     }
 
     reset_minsum ();
