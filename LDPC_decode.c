@@ -34,7 +34,7 @@ static void get_hard_decision_codeword (float * Lq, uint16_t len, uint8_t liftin
     }
 }
 
-static uint8_t check_syndrome (float * Lq, uint16_t len, quasi_cyclic_matrix_t * Hm, quasi_cyclic_matrix_t * Hp, uint8_t * codeword) {
+static uint16_t check_syndrome (float * Lq, uint16_t len, quasi_cyclic_matrix_t * Hm, quasi_cyclic_matrix_t * Hp, uint8_t * codeword) {
 
     uint8_t lifting_size = len/(Hm->cols + Hp->cols);
 
@@ -62,7 +62,7 @@ uint8_t LDPC_decode (float * Lq, uint16_t len, uint8_t * decoded, uint16_t max_i
     }
 
     uint16_t iters = 0;
-    uint8_t parity_check_errors = 0;
+    uint16_t parity_check_errors = 0;
 
     for (iters = 0; iters < max_iters; iters++) {
 

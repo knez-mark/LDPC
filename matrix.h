@@ -21,7 +21,7 @@ typedef union{
     uint32_t *data32;
 } vector_t;
 
-uint8_t find_vector_weight (vector_t x, uint16_t len);
+uint16_t find_vector_weight (vector_t x, uint16_t len);
 void vector_add (vector_t x, vector_t y, vector_t result, uint16_t length);
 void circular_matrix_multiply (quasi_cyclic_matrix_t * H, vector_t x, vector_t b, uint8_t lifting_size);
 
