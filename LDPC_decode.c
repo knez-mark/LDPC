@@ -34,9 +34,9 @@ static void get_hard_decision_codeword (float * Lq, uint16_t len, uint8_t liftin
     }
 }
 
-static uint8_t check_syndrome (float * Lq, uint16_t len, quasi_cyclic_matrix_t * H, uint8_t * codeword) {
+static uint16_t check_syndrome (float * Lq, uint16_t len, quasi_cyclic_matrix_t * Hm, quasi_cyclic_matrix_t * Hp, uint8_t * codeword) {
 
-    uint8_t lifting_size = len/H->cols;
+    uint8_t lifting_size = len/(Hm->cols + Hp->cols);
 
     uint8_t syndrome [MAX_CODE_LEN] = {0};
     memset (syndrome, 0, MAX_CODE_LEN);
@@ -44,35 +44,37 @@ static uint8_t check_syndrome (float * Lq, uint16_t len, quasi_cyclic_matrix_t *
 
     get_hard_decision_codeword (Lq, len, lifting_size, (vector_t) codeword);
 
-    circular_matrix_multiply (H, (vector_t) codeword, (vector_t) syndrome, lifting_size);
+    circular_matrix_multiply (Hm, (vector_t) codeword, (vector_t) syndrome, lifting_size);
+    circular_matrix_multiply (Hp, (vector_t) (codeword + Hm->cols*lifting_size/MIN_LIFTING_SIZE), (vector_t) syndrome, lifting_size);
 
     return find_vector_weight ((vector_t) syndrome, len); //Returns number of parity check equation failures
 }
 
 uint8_t LDPC_decode (float * Lq, uint16_t len, uint8_t * decoded, uint16_t max_iters, uint16_t * num_iters) {
 
-    quasi_cyclic_matrix_t * H = get_H ();
+    quasi_cyclic_matrix_t * Hm = get_Hm ();
+    quasi_cyclic_matrix_t * Hp = get_Hp ();
 
-    uint8_t lifting_size = len/H->cols;
+    uint8_t lifting_size = len/(Hm->cols + Hp->cols);
 
     if (!(lifting_size == 32 || lifting_size == 16 || lifting_size == 8)) {
         return 0;
     }
 
     uint16_t iters = 0;
-    uint8_t parity_check_errors = 0;
+    uint16_t parity_check_errors = 0;
 
     for (iters = 0; iters < max_iters; iters++) {
 
-        parity_check_errors = check_syndrome (Lq, len, H, decoded);
+        parity_check_errors = check_syndrome (Lq, len, Hm, Hp, decoded);
         if (parity_check_errors == 0) {
             break;
         }
 
         #if USE_SUM_PRODUCT
-            layered_sum_product (Lq, len, H);
+            layered_sum_product (Lq, len, Hm, Hp);
         #else
-            layered_normalized_minsum (Lq, len, H);
+            layered_normalized_minsum (Lq, len, Hm, Hp);
         #endif
     }
 

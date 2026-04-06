@@ -56,9 +56,9 @@ static void min2 (float * arr, uint8_t size, float * v1, float * v2, uint8_t * i
     }
 }
 
-void layered_normalized_minsum (float * Lq, uint16_t len, quasi_cyclic_matrix_t * H) {
+void layered_normalized_minsum (float * Lq, uint16_t len, quasi_cyclic_matrix_t * Hm, quasi_cyclic_matrix_t * Hp) {
 
-	uint8_t lifting_size = len/H->cols;
+	uint8_t lifting_size = len/(Hm->cols + Hp->cols);
 
     //for (int i = NUM_EDGES - 3; i < NUM_EDGES; i++) {
         //for (int j = 0; j < lifting_size; j++) {
@@ -69,34 +69,55 @@ void layered_normalized_minsum (float * Lq, uint16_t len, quasi_cyclic_matrix_t 
     //}
     //printf ("\n");
 
-	for (int m = 0; m < BG1_ROWS; m++) {
-		static uint16_t temp_arr [MAX_ROW_WEIGHT]= {0};
-		static uint16_t temp_arr_2 [MAX_ROW_WEIGHT]= {0};
-		for (int k = 0; k < H->rowWeight[m]; k++) {
-			temp_arr[k] = lifting_size*H->columnIndexMap[H->rowOffset[m]+k];
-		  temp_arr_2[k] = H->base_graph[H->rowOffset[m]+k];
+	for (int m = 0; m < Hm->rows; m++) {
+		static uint16_t columnOffset [MAX_ROW_WEIGHT]= {0};
+		static uint16_t circular_shift [MAX_ROW_WEIGHT]= {0};
+
+        uint8_t rowWeight_msg = 0, rowWeight_parity = 0, total_rowWeight = 0;
+
+		for (int k = 0; k < Hm->rowWeight[m]; k++) {
+            if (Hm->columnIndexMap[Hm->rowOffset[m]+k] >= Hm->cols) {
+                break;
+            }
+
+		    columnOffset[k] = lifting_size*Hm->columnIndexMap[Hm->rowOffset[m]+k];
+		    circular_shift[k] = Hm->base_graph[Hm->rowOffset[m]+k];
+        
+            rowWeight_msg++;
 		}
+		for (int k = 0; k < Hp->rowWeight[m]; k++) {
+            if (Hp->columnIndexMap[Hp->rowOffset[m]+k] >= Hp->cols) {
+                break;
+            }
+
+		    columnOffset[rowWeight_msg+k] = lifting_size*(Hm->cols + Hp->columnIndexMap[Hp->rowOffset[m]+k]);
+		    circular_shift[rowWeight_msg+k] = Hp->base_graph[Hp->rowOffset[m]+k];
+        
+            rowWeight_parity++;
+		}        
+        total_rowWeight = rowWeight_msg + rowWeight_parity;
+
     	for (int j = 0; j < lifting_size; j++) {
             float Lq_mj [MAX_ROW_WEIGHT];
-            for (int i = 0; i < H->rowWeight[m]; i++) {
+            for (int i = 0; i < total_rowWeight; i++) {
                 //Lq_mj[i] = Lq[lifting_size*H->columnIndexMap[H->rowOffset[m]+i]+(H->base_graph[H->rowOffset[m]+i]+j)%lifting_size] - R_mj[H->rowOffset[m]+i].element[j];
-                Lq_mj[i] = Lq[temp_arr[i]+((temp_arr_2[i]+j)%lifting_size)] - R_mj[H->rowOffset[m]+i].element[j];
+                Lq_mj[i] = Lq[columnOffset[i]+((circular_shift[i]+j)%lifting_size)] - R_mj[Hm->rowOffset[m]+Hp->rowOffset[m]+i].element[j];
             }
 
             float f1, f2;
             uint8_t i1 = 0, i2 = 0;
-            min2 (Lq_mj, H->rowWeight[m], &f1, &f2, &i1, &i2);
+            min2 (Lq_mj, total_rowWeight, &f1, &f2, &i1, &i2);
 
             if (f1 == 0 && f2 == 0) {
-                for (int i = 0; i < H->rowWeight[m]; i++) {
-                    R_mj[H->rowOffset[m]+i].element[j] = 0;
+                for (int i = 0; i < total_rowWeight; i++) {
+                    R_mj[Hm->rowOffset[m]+Hp->rowOffset[m]+i].element[j] = 0;
                 }
             }
             else {
                 float temp [MAX_ROW_WEIGHT];
                 float prod = 1;
                 if (f1 == 0) {
-                    for (int i = 0; i < H->rowWeight[m]; i++) {
+                    for (int i = 0; i < total_rowWeight; i++) {
                     	temp [i] = 0.0f;
                     	if (i == i1) {
                             continue;
@@ -106,10 +127,10 @@ void layered_normalized_minsum (float * Lq, uint16_t len, quasi_cyclic_matrix_t 
                     temp [i1] = prod * f2;
                 }
                 else {
-                    for (int i = 0; i < H->rowWeight[m]; i++) {
+                    for (int i = 0; i < total_rowWeight; i++) {
                         prod *= sign(Lq_mj [i]);
                     }
-                    for (int i = 0; i < H->rowWeight[m]; i++) {
+                    for (int i = 0; i < total_rowWeight; i++) {
                         if (i == i1) {
                             temp [i] = prod * sign (Lq_mj [i]) * f2;
                         }
@@ -118,67 +139,86 @@ void layered_normalized_minsum (float * Lq, uint16_t len, quasi_cyclic_matrix_t 
                         }
                     }
                 }
-                for (int i = 0; i < H->rowWeight[m]; i++) {
-                    R_mj[H->rowOffset[m]+i].element[j] = ALPHA * temp [i];
+                for (int i = 0; i < total_rowWeight; i++) {
+                    R_mj[Hm->rowOffset[m]+Hp->rowOffset[m]+i].element[j] = ALPHA * temp [i];
                 }
             }
 
-            for (int i = 0; i < H->rowWeight[m]; i++) {
+            for (int i = 0; i < total_rowWeight; i++) {
             	//Lq[lifting_size*H->columnIndexMap[H->rowOffset[m]+i]+(H->base_graph[H->rowOffset[m]+i]+j)%lifting_size] = Lq_mj[i] + R_mj[H->rowOffset[m]+i].element[j];
-            	Lq[temp_arr[i]+((temp_arr_2[i]+j)%lifting_size)] = Lq_mj[i] + R_mj[H->rowOffset[m]+i].element[j];
+            	Lq[columnOffset[i]+((circular_shift[i]+j)%lifting_size)] = Lq_mj[i] + R_mj[Hm->rowOffset[m]+Hp->rowOffset[m]+i].element[j];
             }
         }
     }
-
 }
 
-void layered_sum_product (float * Lq, uint16_t len, quasi_cyclic_matrix_t * H) {
+void layered_sum_product (float * Lq, uint16_t len, quasi_cyclic_matrix_t * Hm, quasi_cyclic_matrix_t * Hp) {
 
-	uint8_t lifting_size = len/H->cols;
+	uint8_t lifting_size = len/(Hm->cols + Hp->cols);
 
-	for (int m = 0; m < BG1_ROWS; m++) {
-		static uint16_t temp_arr [MAX_ROW_WEIGHT]= {0};
-		static uint16_t temp_arr_2 [MAX_ROW_WEIGHT]= {0};
-		for (int k = 0; k < H->rowWeight[m]; k++) {
-			temp_arr[k] = lifting_size*H->columnIndexMap[H->rowOffset[m]+k];
-		  temp_arr_2[k] = H->base_graph[H->rowOffset[m]+k];
+	for (int m = 0; m < Hm->rows; m++) {
+		static uint16_t columnOffset [MAX_ROW_WEIGHT]= {0};
+		static uint16_t circular_shift [MAX_ROW_WEIGHT]= {0};
+
+        uint8_t rowWeight_msg = 0, rowWeight_parity = 0, total_rowWeight = 0;
+
+		for (int k = 0; k < Hm->rowWeight[m]; k++) {
+            if (Hm->columnIndexMap[Hm->rowOffset[m]+k] >= Hm->cols) {
+                break;
+            }
+
+		    columnOffset[k] = lifting_size*Hm->columnIndexMap[Hm->rowOffset[m]+k];
+		    circular_shift[k] = Hm->base_graph[Hm->rowOffset[m]+k];
+        
+            rowWeight_msg++;
 		}
+		for (int k = 0; k < Hp->rowWeight[m]; k++) {
+            if (Hp->columnIndexMap[Hp->rowOffset[m]+k] >= Hp->cols) {
+                break;
+            }
+
+		    columnOffset[rowWeight_msg+k] = lifting_size*(Hm->cols + Hp->columnIndexMap[Hp->rowOffset[m]+k]);
+		    circular_shift[rowWeight_msg+k] = Hp->base_graph[Hp->rowOffset[m]+k];
+        
+            rowWeight_parity++;
+		}        
+        total_rowWeight = rowWeight_msg + rowWeight_parity;
+
     	for (int j = 0; j < lifting_size; j++) {
             float Lq_mj [MAX_ROW_WEIGHT];
-            for (int i = 0; i < H->rowWeight[m]; i++) {
+            for (int i = 0; i < total_rowWeight; i++) {
                 //Lq_mj[i] = Lq[lifting_size*H->columnIndexMap[H->rowOffset[m]+i]+(H->base_graph[H->rowOffset[m]+i]+j)%lifting_size] - R_mj[H->rowOffset[m]+i].element[j];
-                Lq_mj[i] = Lq[temp_arr[i]+((temp_arr_2[i]+j)%lifting_size)] - R_mj[H->rowOffset[m]+i].element[j];
+                Lq_mj[i] = Lq[columnOffset[i]+((circular_shift[i]+j)%lifting_size)] - R_mj[Hm->rowOffset[m]+Hp->rowOffset[m]+i].element[j];
             }
 
             float prefix[MAX_ROW_WEIGHT];
             float suffix[MAX_ROW_WEIGHT];
 
             prefix[0] = Lq_mj[0];
-            for (int i = 1; i < H->rowWeight[m]; i++) {
+            for (int i = 1; i < total_rowWeight; i++) {
                 prefix[i] = boxplus(prefix[i-1], Lq_mj[i]);
             }
-            suffix[H->rowWeight[m]-1] = Lq_mj[H->rowWeight[m]-1];
-            for (int i = H->rowWeight[m]-2; i >= 0; i--) {
+            suffix[total_rowWeight-1] = Lq_mj[total_rowWeight-1];
+            for (int i = total_rowWeight-2; i >= 0; i--) {
                 suffix[i] = boxplus (Lq_mj[i], suffix[i+1]);
             }
 
-            for (int i = 0; i < H->rowWeight[m]; i++) {
+            for (int i = 0; i < total_rowWeight; i++) {
                 if (i == 0) {
-                    R_mj[H->rowOffset[m]+i].element[j] = suffix[1];
+                    R_mj[Hm->rowOffset[m]+Hp->rowOffset[m]+i].element[j] = suffix[1];
                 }
-                else if (i == H->rowWeight[m]-1) {
-                    R_mj[H->rowOffset[m]+i].element[j] = prefix[H->rowWeight[m]-2];
+                else if (i == total_rowWeight-1) {
+                    R_mj[Hm->rowOffset[m]+Hp->rowOffset[m]+i].element[j] = prefix[total_rowWeight-2];
                 }
                 else {
-                    R_mj[H->rowOffset[m]+i].element[j] = boxplus(prefix[i-1], suffix[i+1]);
+                    R_mj[Hm->rowOffset[m]+Hp->rowOffset[m]+i].element[j] = boxplus(prefix[i-1], suffix[i+1]);
                 }
             }
 
-            for (int i = 0; i < H->rowWeight[m]; i++) {
+            for (int i = 0; i < total_rowWeight; i++) {
             	//Lq[lifting_size*H->columnIndexMap[H->rowOffset[m]+i]+(H->base_graph[H->rowOffset[m]+i]+j)%lifting_size] = Lq_mj[i] + R_mj[H->rowOffset[m]+i].element[j];
-            	Lq[temp_arr[i]+((temp_arr_2[i]+j)%lifting_size)] = Lq_mj[i] + R_mj[H->rowOffset[m]+i].element[j];
+            	Lq[columnOffset[i]+((circular_shift[i]+j)%lifting_size)] = Lq_mj[i] + R_mj[Hm->rowOffset[m]+Hp->rowOffset[m]+i].element[j];
             }
         }
     }
-
 }

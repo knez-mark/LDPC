@@ -25,7 +25,7 @@ uint8_t LDPC_encode (uint8_t * data, uint16_t len, uint8_t * parity) {
     //Encoding algorithm taken from "Low-Latency QC-LDPC Encoder Design for 5G NR"
     //by Tian et al.
 
-    uint8_t lifting_size = len/get_H()->cols;
+    uint8_t lifting_size = len/(get_A()->cols + get_C()->rows + 4);
 
     if (!(lifting_size == 32 || lifting_size == 16 || lifting_size == 8)) {
         return 0;

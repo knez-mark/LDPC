@@ -1,7 +1,7 @@
 #include "matrix.h"
 
-uint8_t find_vector_weight (vector_t x, uint16_t len) {
-    uint8_t weight = 0;
+uint16_t find_vector_weight (vector_t x, uint16_t len) {
+    uint16_t weight = 0;
     for (int j = 0; j < len/8; j++) {
         for (int i = 0; i < 8; i++) {
             weight += 0x01 & (x.data8[j] >> i);
