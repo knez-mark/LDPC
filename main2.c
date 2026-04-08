@@ -8,6 +8,7 @@
 #include "length_field.h"
 #include "frame.h"
 #include "LDPC.h"
+#include <correct.h>
 
 static void print_5bits(uint32_t value)
 {
@@ -22,6 +23,80 @@ int main() {
     float noise_stddev = 0.6f;
 
     srand((unsigned)time(NULL));
+
+    /*
+    correct_convolutional *conv;
+    static const correct_convolutional_polynomial_t correct_conv_r12_7_polynomial2 [] = {0133, 0171};
+
+
+    conv = correct_convolutional_create(2, 7, correct_conv_r12_7_polynomial2);
+
+    static uint8_t data [20] = {0};
+    static uint8_t encoded [60] = {0};
+    static uint8_t decoded [20] = {0};
+
+    for (int i = 0; i < sizeof(data); i++) {
+        data [i] = i;
+    }
+
+    correct_convolutional_encode (conv, data, sizeof(data), encoded);
+
+    for (int i = 0; i < correct_convolutional_encode_len(conv, 20)/8; i++) {
+        printf ("%x, ", encoded[i]);
+        if ((i+1) % 8 == 0) {
+            printf ("\n");
+        }
+    }
+    printf ("\n\n");
+
+    correct_convolutional_decode (conv, encoded, correct_convolutional_encode_len(conv, sizeof(data)), decoded);
+    
+    for (int i = 0; i < sizeof(data); i++) {
+        printf ("%x, ", decoded[i]);
+        if ((i+1) % 8 == 0) {
+            printf ("\n");
+        }
+    }
+    printf ("\n\n");
+    correct_convolutional_destroy(conv);
+
+
+    correct_reed_solomon *rs;
+
+    static uint8_t data2 [20] = {0};
+    static uint8_t encoded2 [60] = {0};
+    static uint8_t decoded2 [20] = {0};
+    #define NUM_ROOTS 2
+
+    for (int i = 0; i < sizeof(data2); i++) {
+        data2 [i] = i;
+    }
+
+    rs = correct_reed_solomon_create(correct_rs_primitive_polynomial_8_4_3_2_0, 0, 1, NUM_ROOTS);
+
+    correct_reed_solomon_encode (rs, data2, sizeof(data2), encoded2);
+
+    for (int i = 0; i < sizeof(data2) + NUM_ROOTS; i++) {
+        printf ("%x, ", encoded2[i]);
+        if ((i+1) % 8 == 0) {
+            printf ("\n");
+        }
+    }
+    printf ("\n\n");
+
+    encoded2 [0] = 255;
+
+    correct_reed_solomon_decode (rs, encoded2, sizeof(data2) + NUM_ROOTS, decoded2);
+
+    for (int i = 0; i < sizeof(data2); i++) {
+        printf ("%x, ", decoded2[i]);
+        if ((i+1) % 8 == 0) {
+            printf ("\n");
+        }
+    }
+    printf ("\n\n");
+    correct_reed_solomon_destroy(rs);
+    */
 
     /*
     //Static, zero-initialized struct
@@ -119,7 +194,7 @@ int main() {
     struct timespec start, end;
     FILE *fp = fopen("sim_data.csv", "w"); 
 
-    for (uint8_t msg_len = 0; msg_len < 88; msg_len ++) {
+    for (uint8_t msg_len = 15; msg_len < 64; msg_len += 16) {
 
         float BER_vals [65] = {0};
         int i = 0;
@@ -129,7 +204,7 @@ int main() {
             clock_gettime(CLOCK_MONOTONIC, &start);
 
             float sigma = sqrt(1.0 / (2.0 * pow(10.0, EbN0_dB / 10.0))); 
-            float BER = find_bit_error_rate2 (msg_len, sigma);
+            float BER = find_bit_error_rate_rs_cc (msg_len, sigma, true);
 
             clock_gettime(CLOCK_MONOTONIC, &end);
 

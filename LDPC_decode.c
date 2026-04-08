@@ -50,7 +50,7 @@ static uint16_t check_syndrome (float * Lq, uint16_t len, quasi_cyclic_matrix_t 
     return find_vector_weight ((vector_t) syndrome, len); //Returns number of parity check equation failures
 }
 
-uint8_t LDPC_decode (float * Lq, uint16_t len, uint8_t * decoded, uint16_t max_iters, uint16_t * num_iters) {
+uint16_t LDPC_decode (float * Lq, uint16_t len, uint8_t * decoded, uint16_t max_iters, uint16_t * num_iters) {
 
     quasi_cyclic_matrix_t * Hm = get_Hm ();
     quasi_cyclic_matrix_t * Hp = get_Hp ();

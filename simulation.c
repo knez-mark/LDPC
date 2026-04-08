@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <correct.h>
 
 uint8_t rand_u8_range(uint8_t min, uint8_t max)
 {
@@ -34,6 +35,20 @@ uint16_t bytes_to_bpsk(const uint8_t *bytes, uint16_t num_bytes, float* symbols)
     uint16_t idx = 0;
     for (uint16_t i = 0; i < num_bytes; i++) {
         for (uint8_t bit = 0; bit < 8; bit++) {
+            uint8_t b = (bytes[i] >> bit) & 1;
+            symbols[idx++] = b ? -1.0f : 1.0f;
+        }
+    }
+
+    return total_bits;
+}
+
+uint16_t bytes_to_bpsk_reverse_endianness(const uint8_t *bytes, uint16_t num_bytes, float* symbols) {
+    uint16_t total_bits = num_bytes * 8;
+
+    uint16_t idx = 0;
+    for (uint16_t i = 0; i < num_bytes; i++) {
+        for (int8_t bit = 7; bit >= 0; bit--) {
             uint8_t b = (bytes[i] >> bit) & 1;
             symbols[idx++] = b ? -1.0f : 1.0f;
         }
@@ -248,6 +263,144 @@ float find_bit_error_rate2 (uint8_t msg_len, float noise_stddev) {
         //Calculate BER
         bit_errors += calculate_bit_errors ((uint8_t*) &message, decoding.ldpc, LDPC_msg_size);
         num_transmissions += 8*(LDPC_msg_size);
+    }
+
+    return (float)bit_errors/num_transmissions;
+}
+
+static void cc_puncture (float* symbols, uint16_t len) {
+    for (int i = 0; i < len; i++) {
+        if ((i - 3) % 6 == 0 || (i - 4) % 6 == 0) {
+            symbols [i] = 0.0f;
+        }
+    }
+}
+
+#define CC_SOFT_ONE 255
+#define CC_SOFT_ZERO 0
+#define CC_SOFT_ERASURE 128
+
+static void cc_quantize_hard (float* symbols, uint16_t len, uint8_t* quantized) {
+    for (uint16_t i = 0; i < len; i++) {
+        if (symbols[i] > 0.0f) {
+            quantized [i] = CC_SOFT_ZERO;
+        }
+        else if (symbols[i] < 0.0f) {
+            quantized [i] = CC_SOFT_ONE;
+        }
+        else {
+            quantized [i] = CC_SOFT_ERASURE;
+        }
+    }
+}
+
+#define L_MAX 8.0f
+
+static void cc_quantize_soft (float* symbols, uint16_t len, uint8_t* quantized) {
+    for (uint16_t i = 0; i < len; i++) {
+        float L = symbols [i];
+        if (L > L_MAX) L = L_MAX;
+        if (L < -L_MAX) L = -L_MAX;
+
+        float scale = -127.0f / L_MAX;
+        int q = (int)roundf(scale*L);
+
+        if (q > 127) q = 127;
+        if (q < -127) q = -127;
+        q = q + 128;
+
+        quantized [i] = (uint8_t)q;
+    }
+}
+
+//Use reduced PCM
+float find_bit_error_rate_rs_cc (uint8_t msg_len, float noise_stddev, bool is_soft) {
+
+    uint32_t num_transmissions = 0;
+    uint32_t bit_errors = 0;
+    uint16_t num_iters;
+
+    while (num_transmissions < MAX_TRANSMISSIONS && bit_errors < TARGET_ERRORS) {
+        static message_t message = {0};
+
+        static encoded_t encoding_rs = {0};
+        static encoded_t encoding_rs_cc = {0};
+        static encoded_t decoding_rs_cc = {0};
+        static encoded_t decoding_rs = {0};
+
+        static float bpsk_symbols [8*(18*4*2+3)] = {0};
+        static uint8_t quantized_bpsk_symbols [8*(18*4*2+3)] = {0};
+        
+        memset (&message, 0, sizeof (message_t));
+        memset (&encoding_rs, 0, sizeof (encoded_t));
+        memset (&encoding_rs_cc, 0, sizeof (encoded_t));
+        memset (&decoding_rs_cc, 0, sizeof (encoded_t));
+        memset (&decoding_rs, 0, sizeof (encoded_t));
+        memset (bpsk_symbols, 0, sizeof (bpsk_symbols));
+        memset (quantized_bpsk_symbols, 0, sizeof (quantized_bpsk_symbols));
+
+        //Generate message
+        message.msg_size = msg_len;
+        generate_random_bytes(message.msg, message.msg_size);
+
+        uint8_t rs_msg_size, cc_msg_size, rs_num_roots;
+
+        if (message.msg_size < 16) {
+            rs_msg_size = 16;
+            cc_msg_size = 18;
+            rs_num_roots = 2;
+        }
+        else if (message.msg_size < 16*2) {
+            rs_msg_size = 16*2;
+            cc_msg_size = 18*2;
+            rs_num_roots = 2*2;
+        }
+        else if (message.msg_size < 16*3) {
+            rs_msg_size = 16*3;
+            cc_msg_size = 18*3;
+            rs_num_roots = 2*3;
+        }
+        else {
+            rs_msg_size = 16*4;
+            cc_msg_size = 18*4;
+            rs_num_roots = 2*4;
+        }
+
+        static correct_convolutional *conv;
+        //static const correct_convolutional_polynomial_t correct_conv_r12_7_polynomial [] = {0133, 0171};
+        conv = correct_convolutional_create(2, 7, correct_conv_r12_7_polynomial);
+        //static const correct_convolutional_polynomial_t correct_conv_r12_4_polynomial [] = {05, 07};
+        //conv = correct_convolutional_create(2, 4, correct_conv_r12_4_polynomial);
+
+        static correct_reed_solomon *rs;
+        rs = correct_reed_solomon_create(correct_rs_primitive_polynomial_8_4_3_2_0, 0, 1, rs_num_roots);
+
+        //Encode data
+        correct_reed_solomon_encode (rs, (uint8_t *)&message, rs_msg_size, (uint8_t *)&encoding_rs);
+        correct_convolutional_encode (conv, (uint8_t *)&encoding_rs, cc_msg_size, (uint8_t *)&encoding_rs_cc);
+
+        //Transmit through channel
+        uint16_t num_bits = bytes_to_bpsk_reverse_endianness((uint8_t *)&encoding_rs_cc, (correct_convolutional_encode_len(conv, cc_msg_size) + 8)/8, bpsk_symbols);
+        add_awgn(bpsk_symbols, num_bits, noise_stddev);
+
+        //Puncture and quantize
+        cc_puncture (bpsk_symbols, num_bits);
+        if (is_soft) {
+            cc_quantize_soft (bpsk_symbols, num_bits, quantized_bpsk_symbols);
+        } else {
+            cc_quantize_hard (bpsk_symbols, num_bits, quantized_bpsk_symbols);
+        }
+
+        //Decode message
+        correct_convolutional_decode_soft (conv, quantized_bpsk_symbols, correct_convolutional_encode_len(conv, cc_msg_size), (uint8_t *)&decoding_rs_cc);
+        correct_reed_solomon_decode (rs, (uint8_t *)&decoding_rs_cc, cc_msg_size, (uint8_t *)&decoding_rs);
+
+        correct_convolutional_destroy (conv);
+        correct_reed_solomon_destroy (rs);
+
+        //Calculate BER
+        bit_errors += calculate_bit_errors ((uint8_t*) &message, (uint8_t *)&decoding_rs, rs_msg_size);
+        num_transmissions += 8*(rs_msg_size);
     }
 
     return (float)bit_errors/num_transmissions;

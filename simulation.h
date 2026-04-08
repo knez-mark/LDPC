@@ -2,6 +2,7 @@
 #define SIMULATION_H_
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #define MAX_TRANSMISSIONS 100000000
 #define TARGET_ERRORS 1000
@@ -15,5 +16,7 @@ void add_awgn(float *symbols, uint16_t len, float noise_stddev);
 
 float find_bit_error_rate (uint8_t msg_len, float noise_stddev);
 float find_bit_error_rate2 (uint8_t msg_len, float noise_stddev);
+float find_bit_error_rate_rs_cc (uint8_t msg_len, float noise_stddev, bool is_soft);
+
 
 #endif /* SIMULATION_H_ */

@@ -34,6 +34,6 @@ void LDPC_encode_init (uint8_t msg_size, uint8_t parity_size);
 void LDPC_decode_init (uint8_t msg_size, uint8_t parity_size);
 
 uint8_t LDPC_encode (uint8_t * data, uint16_t len, uint8_t * parity);
-uint8_t LDPC_decode (float * Lq, uint16_t len, uint8_t * decoded, uint16_t max_iters, uint16_t * num_iters);
+uint16_t LDPC_decode (float * Lq, uint16_t len, uint8_t * decoded, uint16_t max_iters, uint16_t * num_iters);
 
 #endif /* LDPC_H_ */
