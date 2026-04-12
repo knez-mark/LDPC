@@ -5,12 +5,10 @@
 #include <float.h>
 #include <math.h>
 #include "matrix.h"
-#include "LDPC.h"
+#include "LDPC_impl.h"
 
-void reset_minsum ();
-void layered_normalized_minsum (float * Lq, uint16_t len, quasi_cyclic_matrix_t * Hm, quasi_cyclic_matrix_t * Hp);
-void layered_sum_product (float * Lq, uint16_t len, quasi_cyclic_matrix_t * Hm, quasi_cyclic_matrix_t * Hp);
-
-#define USE_SUM_PRODUCT 0
+void reset_decode_state (lifting_struct* R_mj, uint16_t size);
+void layered_normalized_minsum (ldpc_decoder_t* ldpc, int8_t * Lq, uint16_t len, uint8_t lifting_size);
+void layered_sum_product (ldpc_decoder_t* ldpc, float * Lq, uint16_t len, uint8_t lifting_size);
 
 #endif /* MINSUM_H_ */

@@ -1,5 +1,7 @@
-#include "LDPC.h"
+#include "LDPC_impl.h"
 #include "matrix.h"
+#include "LDPC_memory.h"
+#include <stddef.h>
 
 //Original base graph
 
@@ -45,85 +47,78 @@ static const uint8_t columnIndexMap_parity [NUM_EDGES_PARITY] = {0, 1, 0, 1, 2, 
                                                                  18, 19, 0, 20, 21, 22, 23, 0, 24, 25, 26, 27, 28, 3, 29, 2, 30, 0, 3, 31, 2, 32, 33, 34, 0, 35, 36, 1, 
                                                                  37, 38, 39, 40, 41, 2, 42, 3, 43, 0, 44, 45};
 
-static quasi_cyclic_matrix_t Hm;
-static quasi_cyclic_matrix_t Hp;
-static quasi_cyclic_matrix_t A;
-static quasi_cyclic_matrix_t C;
-static quasi_cyclic_matrix_t D;
-
-quasi_cyclic_matrix_t* get_Hm () {
-    return &Hm;
-}
-
-quasi_cyclic_matrix_t* get_Hp () {
-    return &Hp;
-}
-
-quasi_cyclic_matrix_t* get_A () {
-    return &A;
-}
-
-quasi_cyclic_matrix_t* get_C () {
-    return &C;
-}
-
-quasi_cyclic_matrix_t* get_D () {
-    return &D;
-}
-
-void LDPC_init (uint8_t msg_size, uint8_t parity_size) {
-    LDPC_encode_init (msg_size, parity_size);
-    LDPC_decode_init (msg_size, parity_size);
-}
-
-void LDPC_encode_init (uint8_t msg_size, uint8_t parity_size) {
-    if (msg_size > 22 || parity_size > 46) {
-        return;
+ldpc_encoder_t* LDPC_encoder_create (ldpc_encoder_cfg_t cfg) {
+    if (cfg.msg_size > 22 || cfg.parity_size > 46 || cfg.bgn != 1) {
+        return NULL;
     }
     
-    A.rows = 4;
-    A.cols = msg_size;
-    
-    A.base_graph = base_graph_msg;
-    A.rowOffset = rowOffset_msg;
-    A.rowWeight = rowWeight_msg;
-    A.columnIndexMap = columnIndexMap_msg;
+    ldpc_encoder_t* ldpc = LDPC_encoder_alloc ();
+    if (ldpc == NULL) return NULL;
 
-    C.rows = parity_size - 4;
-    C.cols = msg_size;
+    ldpc->A->rows = 4;
+    ldpc->A->cols = cfg.msg_size;
     
-    C.base_graph = base_graph_msg;
-    C.rowOffset = rowOffset_msg + 4;
-    C.rowWeight = rowWeight_msg + 4;
-    C.columnIndexMap = columnIndexMap_msg;
+    ldpc->A->base_graph = base_graph_msg;
+    ldpc->A->rowOffset = rowOffset_msg;
+    ldpc->A->rowWeight = rowWeight_msg;
+    ldpc->A->columnIndexMap = columnIndexMap_msg;
 
-    D.rows = parity_size - 4;
-    D.cols = 4;
+    ldpc->C->rows = cfg.parity_size - 4;
+    ldpc->C->cols = cfg.msg_size;
     
-    D.base_graph = base_graph_parity;
-    D.rowOffset = rowOffset_parity + 4;
-    D.rowWeight = rowWeight_parity + 4;
-    D.columnIndexMap = columnIndexMap_parity;
+    ldpc->C->base_graph = base_graph_msg;
+    ldpc->C->rowOffset = rowOffset_msg + 4;
+    ldpc->C->rowWeight = rowWeight_msg + 4;
+    ldpc->C->columnIndexMap = columnIndexMap_msg;
+
+    ldpc->D->rows = cfg.parity_size - 4;
+    ldpc->D->cols = 4;
+    
+    ldpc->D->base_graph = base_graph_parity;
+    ldpc->D->rowOffset = rowOffset_parity + 4;
+    ldpc->D->rowWeight = rowWeight_parity + 4;
+    ldpc->D->columnIndexMap = columnIndexMap_parity;
+
+    ldpc->cfg = cfg;
+
+    return ldpc;
 }
 
-void LDPC_decode_init (uint8_t msg_size, uint8_t parity_size) {
-    if (msg_size > 22 || parity_size > 46) {
-        return;
+ldpc_decoder_t* LDPC_decoder_create (ldpc_decoder_cfg_t cfg) {
+    if (cfg.msg_size > 22 || cfg.parity_size > 46 || cfg.bgn != 1) {
+        return NULL;
     }
 
-    Hm.rows = parity_size;
-    Hm.cols = msg_size;
-    
-    Hm.base_graph = base_graph_msg;
-    Hm.rowOffset = rowOffset_msg;
-    Hm.rowWeight = rowWeight_msg;
-    Hm.columnIndexMap = columnIndexMap_msg;
+    ldpc_decoder_t* ldpc = LDPC_decoder_alloc ();
+    if (ldpc == NULL) return NULL;
 
-    Hp.rows = parity_size;
-    Hp.cols = parity_size;
+    ldpc->Hm->rows = cfg.parity_size;
+    ldpc->Hm->cols = cfg.msg_size;
     
-    Hp.base_graph = base_graph_parity;
-    Hp.rowOffset = rowOffset_parity;
-    Hp.rowWeight = rowWeight_parity;
-    Hp.columnIndexMap = columnIndexMap_parity;    
+    ldpc->Hm->base_graph = base_graph_msg;
+    ldpc->Hm->rowOffset = rowOffset_msg;
+    ldpc->Hm->rowWeight = rowWeight_msg;
+    ldpc->Hm->columnIndexMap = columnIndexMap_msg;
+
+    ldpc->Hp->rows = cfg.parity_size;
+    ldpc->Hp->cols = cfg.parity_size;
+    
+    ldpc->Hp->base_graph = base_graph_parity;
+    ldpc->Hp->rowOffset = rowOffset_parity;
+    ldpc->Hp->rowWeight = rowWeight_parity;
+    ldpc->Hp->columnIndexMap = columnIndexMap_parity;
+
+    ldpc->cfg = cfg;
+
+    return ldpc;
+}
+
+void LDPC_encoder_destroy (ldpc_encoder_t* ldpc) {
+    if (ldpc == NULL) return;
+    LDPC_encoder_free (ldpc);
+}
+
+void LDPC_decoder_destroy (ldpc_decoder_t* ldpc) {
+    if (ldpc == NULL) return;
+    LDPC_decoder_free (ldpc);
 }

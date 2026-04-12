@@ -17,7 +17,7 @@ static void print_5bits(uint32_t value)
 }
 
 int main() {
-    LDPC_init (22, BG1_ROWS);
+    LDPC_memory_init ();
     
     float noise_stddev = 0.6f;
 
@@ -119,7 +119,7 @@ int main() {
     struct timespec start, end;
     FILE *fp = fopen("sim_data.csv", "w"); 
 
-    for (uint8_t msg_len = 0; msg_len < 88; msg_len ++) {
+    for (uint8_t msg_len = 21; msg_len < 88; msg_len ++) {
 
         float BER_vals [65] = {0};
         int i = 0;

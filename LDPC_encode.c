@@ -1,4 +1,4 @@
-#include "LDPC.h"
+#include "LDPC_impl.h"
 
 void mult_by_B_inv (vector_t input, vector_t result, uint8_t lifting_size) {
     if (lifting_size == 32) {
@@ -21,34 +21,34 @@ void mult_by_B_inv (vector_t input, vector_t result, uint8_t lifting_size) {
     }
 }
 
-uint8_t LDPC_encode (uint8_t * data, uint16_t len, uint8_t * parity) {
+uint8_t LDPC_encode (ldpc_encoder_t* ldpc, uint8_t * data, uint16_t len, uint8_t * parity) {
     //Encoding algorithm taken from "Low-Latency QC-LDPC Encoder Design for 5G NR"
     //by Tian et al.
 
-    uint8_t lifting_size = len/(get_A()->cols + get_C()->rows + 4);
+    uint8_t lifting_size = len/(ldpc->cfg.msg_size + ldpc->cfg.parity_size);
 
     if (!(lifting_size == 32 || lifting_size == 16 || lifting_size == 8)) {
         return 0;
     }
 
     //Maximum size is 4 * 32 bits
-    uint8_t A_mult_S [4*MAX_LIFTING_SIZE/MIN_LIFTING_SIZE] = {0};
+    uint8_t A_mult_S [4*MAX_LIFTING_SIZE/EIGHT_BITS_PER_BYTE] = {0};
     uint8_t * P1 = parity;
 
-    uint8_t D_mult_P1 [(BG1_COLS-4)*MAX_LIFTING_SIZE/MIN_LIFTING_SIZE] = {0};
-    uint8_t C_mult_S [(BG1_COLS-4)*MAX_LIFTING_SIZE/MIN_LIFTING_SIZE] = {0};
-    uint8_t * P2 = parity + 4*lifting_size/MIN_LIFTING_SIZE;
+    uint8_t D_mult_P1 [(BG1_COLS-4)*MAX_LIFTING_SIZE/EIGHT_BITS_PER_BYTE] = {0};
+    uint8_t C_mult_S [(BG1_COLS-4)*MAX_LIFTING_SIZE/EIGHT_BITS_PER_BYTE] = {0};
+    uint8_t * P2 = parity + 4*lifting_size/EIGHT_BITS_PER_BYTE;
 
     // 1) Multiply A with S
-    circular_matrix_multiply (get_A(), (vector_t) data, (vector_t) A_mult_S, lifting_size);
+    circular_matrix_multiply (ldpc->A, (vector_t) data, (vector_t) A_mult_S, lifting_size);
     // 2) Find B^-1 * (A * S) to obtain P1
     mult_by_B_inv ((vector_t) A_mult_S, (vector_t) P1, lifting_size);
     // 3) Multiply D with P1
-    circular_matrix_multiply (get_D(), (vector_t) P1, (vector_t) D_mult_P1, lifting_size);
+    circular_matrix_multiply (ldpc->D, (vector_t) P1, (vector_t) D_mult_P1, lifting_size);
     // 4) Multiply C with S
-    circular_matrix_multiply (get_C(), (vector_t) data, (vector_t) C_mult_S, lifting_size);
+    circular_matrix_multiply (ldpc->C, (vector_t) data, (vector_t) C_mult_S, lifting_size);
     // 5) Add the results from 3) and 4)
-    vector_add ((vector_t) D_mult_P1, (vector_t) C_mult_S, (vector_t) P2, get_C()->rows*lifting_size/MIN_LIFTING_SIZE);
+    vector_add ((vector_t) D_mult_P1, (vector_t) C_mult_S, (vector_t) P2, ldpc->C->rows*lifting_size/EIGHT_BITS_PER_BYTE);
 
     return 1;
 }

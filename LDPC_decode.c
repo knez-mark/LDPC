@@ -1,27 +1,35 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include "LDPC.h"
+#include "LDPC_impl.h"
 #include "matrix.h"
 #include "minsum.h"
 
-static void get_hard_decision_codeword (float * Lq, uint16_t len, uint8_t lifting_size, vector_t codeword) {
+static inline uint8_t is_less_than_zero (void * val, int idx) {
+    #if USE_SUM_PRODUCT
+        return ((float *)val)[idx] < 0;
+    #else
+        return ((int8_t *)val)[idx] < 0;
+    #endif
+}
+
+static void get_hard_decision_codeword (void * Lq, uint16_t len, uint8_t lifting_size, vector_t codeword) {
     int8_t bit_ptr = 0;
     uint8_t byte_ptr = 0;
 
     for (int i = 0; i < len; i++) {
         if (lifting_size == 32) {
-            if (Lq [i] < 0) { 
+            if (is_less_than_zero (Lq, i)) { 
                 codeword.data32 [byte_ptr] |= 1 << bit_ptr;
             }
         }
         else if (lifting_size == 16) {
-            if (Lq [i] < 0) { 
+            if (is_less_than_zero (Lq, i)) { 
                 codeword.data16 [byte_ptr] |= 1 << bit_ptr;
             }
         }
         else { //lifting size of 8
-            if (Lq [i] < 0) { 
+            if (is_less_than_zero (Lq, i)) { 
                 codeword.data8 [byte_ptr] |= 1 << bit_ptr;
             }
         }
@@ -34,7 +42,7 @@ static void get_hard_decision_codeword (float * Lq, uint16_t len, uint8_t liftin
     }
 }
 
-static uint16_t check_syndrome (float * Lq, uint16_t len, quasi_cyclic_matrix_t * Hm, quasi_cyclic_matrix_t * Hp, uint8_t * codeword) {
+static uint16_t check_syndrome (void * Lq, uint16_t len, quasi_cyclic_matrix_t * Hm, quasi_cyclic_matrix_t * Hp, uint8_t * codeword) {
 
     uint8_t lifting_size = len/(Hm->cols + Hp->cols);
 
@@ -45,17 +53,14 @@ static uint16_t check_syndrome (float * Lq, uint16_t len, quasi_cyclic_matrix_t 
     get_hard_decision_codeword (Lq, len, lifting_size, (vector_t) codeword);
 
     circular_matrix_multiply (Hm, (vector_t) codeword, (vector_t) syndrome, lifting_size);
-    circular_matrix_multiply (Hp, (vector_t) (codeword + Hm->cols*lifting_size/MIN_LIFTING_SIZE), (vector_t) syndrome, lifting_size);
+    circular_matrix_multiply (Hp, (vector_t) (codeword + Hm->cols*lifting_size/EIGHT_BITS_PER_BYTE), (vector_t) syndrome, lifting_size);
 
     return find_vector_weight ((vector_t) syndrome, len); //Returns number of parity check equation failures
 }
 
-uint8_t LDPC_decode (float * Lq, uint16_t len, uint8_t * decoded, uint16_t max_iters, uint16_t * num_iters) {
+uint16_t LDPC_decode (ldpc_decoder_t* ldpc, void * Lq, uint16_t len, uint8_t * decoded, uint16_t * num_iters) {
 
-    quasi_cyclic_matrix_t * Hm = get_Hm ();
-    quasi_cyclic_matrix_t * Hp = get_Hp ();
-
-    uint8_t lifting_size = len/(Hm->cols + Hp->cols);
+    uint8_t lifting_size = len/(ldpc->cfg.msg_size + ldpc->cfg.parity_size);
 
     if (!(lifting_size == 32 || lifting_size == 16 || lifting_size == 8)) {
         return 0;
@@ -64,21 +69,21 @@ uint8_t LDPC_decode (float * Lq, uint16_t len, uint8_t * decoded, uint16_t max_i
     uint16_t iters = 0;
     uint16_t parity_check_errors = 0;
 
-    for (iters = 0; iters < max_iters; iters++) {
+    reset_decode_state (ldpc->R_mj, NUM_EDGES);
 
-        parity_check_errors = check_syndrome (Lq, len, Hm, Hp, decoded);
+    for (iters = 0; iters < ldpc->cfg.max_iters; iters++) {
+
+        parity_check_errors = check_syndrome (Lq, len, ldpc->Hm, ldpc->Hp, decoded);
         if (parity_check_errors == 0) {
             break;
         }
 
         #if USE_SUM_PRODUCT
-            layered_sum_product (Lq, len, Hm, Hp);
+            layered_sum_product (ldpc, Lq, len, lifting_size);
         #else
-            layered_normalized_minsum (Lq, len, Hm, Hp);
+            layered_normalized_minsum (ldpc, Lq, len, lifting_size);
         #endif
     }
-
-    reset_minsum ();
     
     *num_iters = iters;
     return parity_check_errors;
