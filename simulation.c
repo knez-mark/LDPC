@@ -69,21 +69,32 @@ static uint16_t calculate_bit_errors (uint8_t *msg, uint8_t *decoded, uint8_t ms
     return bit_errors;
 }
 
-#define L_MAX 12.0f
+#define TYPE_MAX_T(T) _Generic((T)0, \
+    int8_t: INT8_MAX, \
+    int16_t: INT16_MAX, \
+    int32_t: INT32_MAX, \
+    int64_t: INT64_MAX, \
+    uint8_t: UINT8_MAX, \
+    uint16_t: UINT16_MAX, \
+    uint32_t: UINT32_MAX, \
+    uint64_t: UINT64_MAX \
+)
 
-static void quantize (float* symbols, uint16_t len, int8_t* quantized) {
+#define L_MAX 8.0f
+
+static void quantize (float* symbols, uint16_t len, ldpc_quantized_t* quantized) {
     for (uint16_t i = 0; i < len; i++) {
         float L = symbols [i];
         if (L > L_MAX) L = L_MAX;
         if (L < -L_MAX) L = -L_MAX;
 
-        float scale = 128.0f / L_MAX;
+        float scale = TYPE_MAX_T(ldpc_quantized_t) / L_MAX /4; //Using full range causes issues (divide by 4)
         int q = (int)roundf(scale*L);
 
-        if (q > 127) q = 127;
-        if (q < -127) q = -127;
+        if (q > TYPE_MAX_T(ldpc_quantized_t)) q = TYPE_MAX_T(ldpc_quantized_t);
+        if (q < -TYPE_MAX_T(ldpc_quantized_t)) q = -TYPE_MAX_T(ldpc_quantized_t);
 
-        quantized [i] = (int8_t)q;
+        quantized [i] = (ldpc_quantized_t)q;
     }
 }
 
@@ -103,7 +114,7 @@ float find_bit_error_rate2 (uint8_t msg_len, float noise_stddev) {
         static uint8_t parity [272] = {0};
 
         static float bpsk_symbols [272*8] = {0};
-        static int8_t quantized_symbols [272*8] = {0};
+        static ldpc_quantized_t quantized_symbols [272*8] = {0};
         
         memset (&message, 0, sizeof (message_t));
         memset (&encoding, 0, sizeof (encoded_t));

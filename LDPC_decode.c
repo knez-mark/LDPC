@@ -9,7 +9,7 @@ static inline uint8_t is_less_than_zero (void * val, int idx) {
     #if USE_SUM_PRODUCT
         return ((float *)val)[idx] < 0;
     #else
-        return ((int8_t *)val)[idx] < 0;
+        return ((ldpc_quantized_t *)val)[idx] < 0;
     #endif
 }
 

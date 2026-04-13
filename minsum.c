@@ -32,28 +32,60 @@ static float sign (float in) {
     }
 }
 
-static inline int8_t clamp (int val) {
-    if (val > 127) return 127;
-    else if (val < -127) return -127;
-    return val;
+#define TYPE_MAX_T(T) _Generic((T)0, \
+    int8_t: INT8_MAX, \
+    int16_t: INT16_MAX, \
+    int32_t: INT32_MAX, \
+    int64_t: INT64_MAX, \
+    uint8_t: UINT8_MAX, \
+    uint16_t: UINT16_MAX, \
+    uint32_t: UINT32_MAX, \
+    uint64_t: UINT64_MAX \
+)
+
+#define CLAMP(x) _Generic((ldpc_quantized_t)0, \
+    int8_t:  clamp_int8, \
+    int16_t: clamp_int16, \
+    int32_t: clamp_int32 \
+)(x)
+
+static inline int8_t clamp_int8(int x)
+{
+    if (x > 127) return 127;
+    if (x < -127) return -127;
+    return (int8_t)x;
 }
 
-static void min2_sign (int8_t * arr, uint8_t size, int8_t * v1, int8_t * v2, uint8_t * i1, int8_t * sign) {
+static inline int16_t clamp_int16(int x)
+{
+    if (x > 32767) return 32767;
+    if (x < -32767) return -32767;
+    return (int16_t)x;
+}
+
+static inline int32_t clamp_int32(int x)
+{
+    if (x > INT32_MAX) return INT32_MAX;
+    if (x < -INT32_MAX) return -INT32_MAX;
+    return (int32_t)x;
+}
+
+static void min2_sign (ldpc_quantized_t * arr, uint8_t size, ldpc_quantized_t * v1, ldpc_quantized_t * v2, uint8_t * i1, int8_t * sign) {
     
-    int8_t min1 = 127;
-    int8_t min2 = 127;
+    ldpc_quantized_t min1 = TYPE_MAX_T(ldpc_quantized_t);
+    ldpc_quantized_t min2 = TYPE_MAX_T(ldpc_quantized_t);
     uint8_t min_idx = 0;
     int8_t sign_prod = 1;
 
     for (int i = 0; i < size; i++) {
-        int8_t x = arr[i];
+        ldpc_quantized_t x = arr[i];
 
         //Treat 0 as +1
         int8_t s = (x < 0) ? -1 : 1;
         sign_prod *= s;
 
         //Absolute value
-        int8_t ax = (x < 0) ? -x : x;
+        ldpc_quantized_t ax = (x < 0) ? -x : x;
 
         if (ax < min1) {
             min2 = min1;
@@ -71,7 +103,7 @@ static void min2_sign (int8_t * arr, uint8_t size, int8_t * v1, int8_t * v2, uin
     *sign = sign_prod;
 }
 
-void layered_normalized_minsum (ldpc_decoder_t* ldpc, int8_t * Lq, uint16_t len, uint8_t lifting_size) {
+void layered_normalized_minsum (ldpc_decoder_t* ldpc, ldpc_quantized_t * Lq, uint16_t len, uint8_t lifting_size) {
 
     quasi_cyclic_matrix_t* Hm = ldpc->Hm;
     quasi_cyclic_matrix_t* Hp = ldpc->Hp;
@@ -117,15 +149,15 @@ void layered_normalized_minsum (ldpc_decoder_t* ldpc, int8_t * Lq, uint16_t len,
 		}
 
     	for (int j = 0; j < lifting_size; j++) {
-            int8_t Lq_mj [MAX_ROW_WEIGHT];
+            ldpc_quantized_t Lq_mj [MAX_ROW_WEIGHT];
             for (int i = 0; i < rowWeight; i++) {
                 uint16_t shift = circular_shift[i] + j;
                 if (shift >= lifting_size) shift -= lifting_size;
 
-                Lq_mj[i] = clamp (Lq[columnOffset[i]+shift] - R_mj[i].element[j]);
+                Lq_mj[i] = CLAMP (Lq[columnOffset[i]+shift] - R_mj[i].element[j]);
             }
 
-            int8_t v1, v2;
+            ldpc_quantized_t v1, v2;
             uint8_t i1 = 0;
             int8_t sign_prod;
             min2_sign (Lq_mj, rowWeight, &v1, &v2, &i1, &sign_prod);
@@ -133,14 +165,14 @@ void layered_normalized_minsum (ldpc_decoder_t* ldpc, int8_t * Lq, uint16_t len,
             for (int i = 0; i < rowWeight; i++) {
                 int8_t s = (Lq_mj[i] < 0) ? -1 : 1;
 
-                int8_t val = (i == i1) ? v2 : v1;
+                ldpc_quantized_t val = (i == i1) ? v2 : v1;
 
-                R_mj[i].element[j] = clamp (alpha * sign_prod * s * val);
+                R_mj[i].element[j] = CLAMP (alpha * sign_prod * s * val);
 
                 uint16_t shift = circular_shift[i] + j;
                 if (shift >= lifting_size) shift -= lifting_size;
 
-                Lq[columnOffset[i]+shift] = clamp (Lq_mj[i] + R_mj[i].element[j]);
+                Lq[columnOffset[i]+shift] = CLAMP (Lq_mj[i] + R_mj[i].element[j]);
             }
         }
     }

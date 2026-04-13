@@ -10,7 +10,7 @@ typedef struct{
     #if USE_SUM_PRODUCT
     float element [MAX_LIFTING_SIZE];
     #else
-    int8_t element [MAX_LIFTING_SIZE];
+    ldpc_quantized_t element [MAX_LIFTING_SIZE];
     #endif
 }lifting_struct;
 

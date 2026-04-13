@@ -31,6 +31,8 @@ typedef struct {
     uint8_t bgn;
 } ldpc_decoder_cfg_t;
 
+typedef int8_t ldpc_quantized_t;
+
 typedef struct ldpc_encoder ldpc_encoder_t;
 typedef struct ldpc_decoder ldpc_decoder_t;
 
