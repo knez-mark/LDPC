@@ -1,4 +1,5 @@
 #include "LDPC_impl.h"
+#include <string.h>
 
 void mult_by_B_inv (vector_t input, vector_t result, uint8_t lifting_size) {
     if (lifting_size == 32) {
@@ -27,28 +28,31 @@ uint8_t LDPC_encode (ldpc_encoder_t* ldpc, uint8_t * data, uint16_t len, uint8_t
 
     uint8_t lifting_size = len/(ldpc->cfg.msg_size + ldpc->cfg.parity_size);
 
-    if (!(lifting_size == 32 || lifting_size == 16 || lifting_size == 8)) {
+    if (!is_valid_lifting_size(lifting_size)) {
         return 0;
     }
 
     //Maximum size is 4 * 32 bits
-    uint8_t A_mult_S [4*MAX_LIFTING_SIZE/EIGHT_BITS_PER_BYTE] = {0};
+    uint8_t * A_mult_S = ldpc->A_mult_S;
+    memset (A_mult_S, 0, sizeof (ldpc->A_mult_S));
     uint8_t * P1 = parity;
 
-    uint8_t D_mult_P1 [(BG1_COLS-4)*MAX_LIFTING_SIZE/EIGHT_BITS_PER_BYTE] = {0};
-    uint8_t C_mult_S [(BG1_COLS-4)*MAX_LIFTING_SIZE/EIGHT_BITS_PER_BYTE] = {0};
+    uint8_t * D_mult_P1 = ldpc->D_mult_P1;
+    memset (D_mult_P1, 0, sizeof (ldpc->D_mult_P1));
+    uint8_t * C_mult_S = ldpc->C_mult_S;
+    memset (C_mult_S, 0, sizeof (ldpc->C_mult_S));
     uint8_t * P2 = parity + 4*lifting_size/EIGHT_BITS_PER_BYTE;
 
     // 1) Multiply A with S
-    circular_matrix_multiply (ldpc->A, (vector_t) data, (vector_t) A_mult_S, lifting_size);
+    circular_matrix_multiply (&ldpc->A, (vector_t) data, (vector_t) A_mult_S, lifting_size);
     // 2) Find B^-1 * (A * S) to obtain P1
     mult_by_B_inv ((vector_t) A_mult_S, (vector_t) P1, lifting_size);
     // 3) Multiply D with P1
-    circular_matrix_multiply (ldpc->D, (vector_t) P1, (vector_t) D_mult_P1, lifting_size);
+    circular_matrix_multiply (&ldpc->D, (vector_t) P1, (vector_t) D_mult_P1, lifting_size);
     // 4) Multiply C with S
-    circular_matrix_multiply (ldpc->C, (vector_t) data, (vector_t) C_mult_S, lifting_size);
+    circular_matrix_multiply (&ldpc->C, (vector_t) data, (vector_t) C_mult_S, lifting_size);
     // 5) Add the results from 3) and 4)
-    vector_add ((vector_t) D_mult_P1, (vector_t) C_mult_S, (vector_t) P2, ldpc->C->rows*lifting_size/EIGHT_BITS_PER_BYTE);
+    vector_add ((vector_t) D_mult_P1, (vector_t) C_mult_S, (vector_t) P2, ldpc->C.rows*lifting_size/EIGHT_BITS_PER_BYTE);
 
     return 1;
 }

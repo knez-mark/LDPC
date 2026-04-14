@@ -3,14 +3,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-static quasi_cyclic_matrix_t A;
-static quasi_cyclic_matrix_t C;
-static quasi_cyclic_matrix_t D;
-
-static lifting_struct R_mj_pool [NUM_EDGES];
-static quasi_cyclic_matrix_t Hm;
-static quasi_cyclic_matrix_t Hp;
-
 static ldpc_encoder_t encoders;
 static ldpc_decoder_t decoders;
 
@@ -18,14 +10,8 @@ static bool enc_in_use;
 static bool dec_in_use;
 
 void LDPC_memory_init (void) {
-    encoders.A = &A;
-    encoders.C = &C;
-    encoders.D = &D;
     enc_in_use = false;
 
-    decoders.R_mj = R_mj_pool;
-    decoders.Hm = &Hm;
-    decoders.Hp = &Hp;
     dec_in_use = false;
 }
 

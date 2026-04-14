@@ -2,11 +2,19 @@
 
 uint16_t find_vector_weight (vector_t x, uint16_t len) {
     uint16_t weight = 0;
-    for (int j = 0; j < len/8; j++) {
-        for (int i = 0; i < 8; i++) {
-            weight += 0x01 & (x.data8[j] >> i);
-        }
+
+    uint16_t bytes = len / 8;
+    uint16_t rem = len % 8;
+
+    for (uint16_t i = 0; i < bytes; i++) {
+        weight += __builtin_popcount(x.data8[i]);
     }
+
+    if (rem) {
+        uint8_t last = x.data8[bytes] & ((1 << rem) - 1);
+        weight += __builtin_popcount(last);
+    }
+
     return weight;
 }
 
