@@ -17,7 +17,7 @@ static void print_5bits(uint32_t value)
 }
 
 int main() {
-    LDPC_init (22, BG1_ROWS);
+    LDPC_memory_init ();
     
     float noise_stddev = 0.6f;
 
