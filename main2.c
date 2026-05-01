@@ -194,7 +194,7 @@ int main() {
     struct timespec start, end;
     FILE *fp = fopen("sim_data.csv", "w"); 
 
-    for (uint8_t msg_len = 15; msg_len < 64; msg_len += 16) {
+    for (uint8_t msg_len = 15; msg_len < 80; msg_len += 16) {
 
         float BER_vals [65] = {0};
         int i = 0;

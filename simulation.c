@@ -328,8 +328,8 @@ float find_bit_error_rate_rs_cc (uint8_t msg_len, float noise_stddev, bool is_so
         static encoded_t decoding_rs_cc = {0};
         static encoded_t decoding_rs = {0};
 
-        static float bpsk_symbols [8*(18*4*2+3)] = {0};
-        static uint8_t quantized_bpsk_symbols [8*(18*4*2+3)] = {0};
+        static float bpsk_symbols [8*(18*5*2+3)] = {0};
+        static uint8_t quantized_bpsk_symbols [8*(18*5*2+3)] = {0};
         
         memset (&message, 0, sizeof (message_t));
         memset (&encoding_rs, 0, sizeof (encoded_t));
@@ -360,10 +360,15 @@ float find_bit_error_rate_rs_cc (uint8_t msg_len, float noise_stddev, bool is_so
             cc_msg_size = 18*3;
             rs_num_roots = 2*3;
         }
-        else {
+        else if (message.msg_size < 16*4) {
             rs_msg_size = 16*4;
             cc_msg_size = 18*4;
             rs_num_roots = 2*4;
+        }
+        else {
+            rs_msg_size = 16*5;
+            cc_msg_size = 18*5;
+            rs_num_roots = 2*5;
         }
 
         static correct_convolutional *conv;
