@@ -15,20 +15,38 @@
 //#define NUM_ENCODERS 0
 //#define NUM_DECODERS 1
 
+typedef enum {
+    LDPC_LIFTING_AUTO,
+    LDPC_LIFTING_EXPLICIT
+} lifting_mode_t;
+
 typedef struct {
+    //uint16_t msg_len;
+    //float rate;
     uint8_t msg_size;
     uint8_t parity_size;
+
     uint8_t bgn;
+
+    lifting_mode_t lifting_mode;
+    uint16_t lifting_size;
 } ldpc_encoder_cfg_t;
 
 typedef struct {
+    //uint16_t msg_len;
+    //float rate;
     uint8_t msg_size;
     uint8_t parity_size;
+
+    uint8_t bgn;
+
     #if (!USE_SUM_PRODUCT)
         float alpha;
     #endif
     uint16_t max_iters;
-    uint8_t bgn;
+
+    lifting_mode_t lifting_mode;
+    uint16_t lifting_size;
 } ldpc_decoder_cfg_t;
 
 typedef int8_t ldpc_quantized_t;

@@ -22,6 +22,38 @@ void mult_by_B_inv (vector_t input, vector_t result, uint8_t lifting_size) {
     }
 }
 
+static void mult_by_B_inv_general (uint8_t * input, uint8_t * result, uint16_t lifting_size) {
+    uint16_t block_size = (lifting_size + (EIGHT_BITS_PER_BYTE - 1)) / EIGHT_BITS_PER_BYTE;
+    
+    vector_add4 (input, 
+                input + 1*block_size, 
+                input + 2*block_size, 
+                input + 3*block_size, 
+                result, 
+                lifting_size);
+    
+    circular_shift (input, 
+                    result + 3*block_size,
+                    lifting_size,
+                    1);
+
+    vector_add2 (input,
+                result + 3*block_size,
+                result + 1*block_size,
+                lifting_size);
+
+    vector_add2 (input + 3*block_size,
+                result + 3*block_size,
+                result + 3*block_size,
+                lifting_size);
+
+    vector_add2 (input + 2*block_size,
+                result + 3*block_size,
+                result + 2*block_size,
+                lifting_size);
+
+}
+
 uint8_t LDPC_encode (ldpc_encoder_t* ldpc, uint8_t * data, uint16_t len, uint8_t * parity) {
     //Encoding algorithm taken from "Low-Latency QC-LDPC Encoder Design for 5G NR"
     //by Tian et al.
@@ -35,24 +67,37 @@ uint8_t LDPC_encode (ldpc_encoder_t* ldpc, uint8_t * data, uint16_t len, uint8_t
     //Maximum size is 4 * 32 bits
     uint8_t * A_mult_S = ldpc->A_mult_S;
     memset (A_mult_S, 0, sizeof (ldpc->A_mult_S));
-    uint8_t * P1 = parity;
+    uint8_t * P1 = ldpc->parity;
 
     uint8_t * D_mult_P1 = ldpc->D_mult_P1;
     memset (D_mult_P1, 0, sizeof (ldpc->D_mult_P1));
     uint8_t * C_mult_S = ldpc->C_mult_S;
     memset (C_mult_S, 0, sizeof (ldpc->C_mult_S));
-    uint8_t * P2 = parity + 4*lifting_size/EIGHT_BITS_PER_BYTE;
+    
+    uint16_t block_size = (lifting_size + (EIGHT_BITS_PER_BYTE - 1)) / EIGHT_BITS_PER_BYTE;
+    uint8_t * P2 = P1 + 4*block_size;
+
+    uint8_t *temp = ldpc->temp;
 
     // 1) Multiply A with S
-    circular_matrix_multiply (&ldpc->A, (vector_t) data, (vector_t) A_mult_S, lifting_size);
+    uint8_t * data_aligned = ldpc->data;
+    get_byte_aligned(data, data_aligned, len, lifting_size);
+
+    circular_matrix_multiply_general (&ldpc->A, data_aligned, A_mult_S, temp, lifting_size);
+    //circular_matrix_multiply (&ldpc->A, (vector_t)data, (vector_t)A_mult_S, lifting_size);
     // 2) Find B^-1 * (A * S) to obtain P1
-    mult_by_B_inv ((vector_t) A_mult_S, (vector_t) P1, lifting_size);
+    mult_by_B_inv_general (A_mult_S, P1, lifting_size);
+    //mult_by_B_inv ((vector_t)A_mult_S,(vector_t) P1, lifting_size);
     // 3) Multiply D with P1
-    circular_matrix_multiply (&ldpc->D, (vector_t) P1, (vector_t) D_mult_P1, lifting_size);
+    circular_matrix_multiply_general (&ldpc->D, P1, D_mult_P1, temp, lifting_size);
+    //circular_matrix_multiply (&ldpc->D, (vector_t) P1, (vector_t) D_mult_P1, lifting_size);
     // 4) Multiply C with S
-    circular_matrix_multiply (&ldpc->C, (vector_t) data, (vector_t) C_mult_S, lifting_size);
+    circular_matrix_multiply_general (&ldpc->C, data_aligned, C_mult_S, temp, lifting_size);
+    //circular_matrix_multiply (&ldpc->C, (vector_t)data, (vector_t)C_mult_S, lifting_size);
     // 5) Add the results from 3) and 4)
-    vector_add ((vector_t) D_mult_P1, (vector_t) C_mult_S, (vector_t) P2, ldpc->C.rows*lifting_size/EIGHT_BITS_PER_BYTE);
+    vector_add2 (D_mult_P1, C_mult_S, P2, ldpc->C.rows*((lifting_size + 7)/8));
+
+    get_packed (P1, parity, (ldpc->A.rows + ldpc->C.rows)*lifting_size, lifting_size);
 
     return 1;
 }
