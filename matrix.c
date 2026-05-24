@@ -158,11 +158,6 @@ void circular_shift(
 {
     shift %= lifting_size;
 
-    if (shift == 0)
-    {
-        return;
-    }
-
     const uint16_t num_bytes =
         (lifting_size + 7) >> 3;
 
@@ -182,7 +177,7 @@ void circular_shift(
         uint16_t src_bit =
             (dst_bit
              + lifting_size
-             - shift)
+             + shift)
             % lifting_size;
 
         //Read source bit
@@ -242,7 +237,6 @@ void circular_matrix_multiply_general (quasi_cyclic_matrix_t * H, uint8_t *x, ui
 
             circular_shift (x + col[i]*block_size, temp, lifting_size, base_graph[i]);
             vector_add2 (temp, b + j*block_size, b + j*block_size, lifting_size);
-
         }
     }
 }

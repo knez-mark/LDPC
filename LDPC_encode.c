@@ -32,7 +32,7 @@ static void mult_by_B_inv_general (uint8_t * input, uint8_t * result, uint16_t l
                 result, 
                 lifting_size);
     
-    circular_shift (input, 
+    circular_shift (result, 
                     result + 3*block_size,
                     lifting_size,
                     1);
@@ -95,7 +95,7 @@ uint8_t LDPC_encode (ldpc_encoder_t* ldpc, uint8_t * data, uint16_t len, uint8_t
     circular_matrix_multiply_general (&ldpc->C, data_aligned, C_mult_S, temp, lifting_size);
     //circular_matrix_multiply (&ldpc->C, (vector_t)data, (vector_t)C_mult_S, lifting_size);
     // 5) Add the results from 3) and 4)
-    vector_add2 (D_mult_P1, C_mult_S, P2, ldpc->C.rows*((lifting_size + 7)/8));
+    vector_add2 (D_mult_P1, C_mult_S, P2, 8*ldpc->C.rows*((lifting_size + 7)/8));
 
     get_packed (P1, parity, (ldpc->A.rows + ldpc->C.rows)*lifting_size, lifting_size);
 
