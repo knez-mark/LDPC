@@ -8,8 +8,41 @@
 #endif
 #include "matrix.h"
 
-static void reset_decode_state (lifting_struct* R_mj, uint16_t size) {
-    memset (R_mj, 0, size*sizeof(lifting_struct));
+#define TYPE_MAX_T(T) _Generic((T)0, \
+    int8_t: INT8_MAX, \
+    int16_t: INT16_MAX, \
+    int32_t: INT32_MAX, \
+    int64_t: INT64_MAX, \
+    uint8_t: UINT8_MAX, \
+    uint16_t: UINT16_MAX, \
+    uint32_t: UINT32_MAX, \
+    uint64_t: UINT64_MAX \
+)
+
+static void reset_decode_state (ldpc_decoder_t* ldpc, void *Lq_void) {
+    memset (ldpc->R_mj, 0, sizeof(ldpc->R_mj));
+    memset (ldpc->Lq, 0, sizeof (ldpc->Lq));
+
+    uint16_t Z = ldpc->cfg.lifting_size;
+    uint16_t msg_len = ldpc->cfg.msg_len;
+    uint16_t code_len = ldpc->cfg.target_code_len;
+    uint16_t parity_len = code_len - msg_len;
+
+    //uint16_t actual_msg_len = ((msg_len + (Z-1))/Z)*Z;
+    uint16_t actual_msg_len = ldpc->msg_size*Z;
+    #if USE_SUM_PRODUCT
+        memcpy (ldpc->Lq, Lq_void, msg_len*sizeof(float));
+        for (int i = msg_len; i < actual_msg_len; i++) {
+            ldpc->Lq [i] = 10.0f;
+        }
+        memcpy (ldpc->Lq + actual_msg_len, Lq_void + msg_len, parity_len*sizeof(float));
+    #else
+        memcpy (ldpc->Lq, Lq_void, msg_len*sizeof(ldpc_quantized_t));
+        for (int i = msg_len; i < actual_msg_len; i++) {
+            ldpc->Lq [i] = TYPE_MAX_T (ldpc_quantized_t);
+        }
+        memcpy (ldpc->Lq + actual_msg_len, Lq_void + msg_len, parity_len*sizeof(ldpc_quantized_t));
+    #endif
 }
 
 #if USE_SUM_PRODUCT
@@ -28,17 +61,6 @@ static inline float boxplus(float a, float b)
     return sign * (min_ab + term1 - term2);
 }
 #endif
-
-#define TYPE_MAX_T(T) _Generic((T)0, \
-    int8_t: INT8_MAX, \
-    int16_t: INT16_MAX, \
-    int32_t: INT32_MAX, \
-    int64_t: INT64_MAX, \
-    uint8_t: UINT8_MAX, \
-    uint16_t: UINT16_MAX, \
-    uint32_t: UINT32_MAX, \
-    uint64_t: UINT64_MAX \
-)
 
 #define CLAMP(x) _Generic((ldpc_quantized_t)0, \
     int8_t:  clamp_int8, \
@@ -131,14 +153,15 @@ static void get_hard_decision_codeword (void * Lq, uint16_t len, uint8_t * codew
     }
 }
 
-static uint16_t check_syndrome (ldpc_decoder_t * ldpc, void * Lq, uint16_t len, uint8_t * codeword) {
+static uint16_t check_syndrome (ldpc_decoder_t * ldpc, uint8_t * codeword) {
 
-    uint8_t lifting_size = len/(ldpc->Hm.cols + ldpc->Hp.cols);
+    uint16_t lifting_size = ldpc->cfg.lifting_size;
+    uint16_t len = lifting_size*(ldpc->msg_size + ldpc->parity_size);
 
     uint8_t* syndrome = ldpc->syndrome;
     memset (syndrome, 0, sizeof (ldpc->syndrome));
 
-    get_hard_decision_codeword (Lq, len, codeword);
+    get_hard_decision_codeword (ldpc->Lq, len, codeword);
 
     uint8_t* codeword_aligned = ldpc->codeword;
     get_byte_aligned (codeword, codeword_aligned, len, lifting_size);
@@ -151,16 +174,18 @@ static uint16_t check_syndrome (ldpc_decoder_t * ldpc, void * Lq, uint16_t len, 
     return find_vector_weight ((vector_t) syndrome, ldpc->Hm.rows*block_size*EIGHT_BITS_PER_BYTE); //Returns number of parity check equation failures
 }
 
-static void LDPC_decode_one_iter (ldpc_decoder_t* ldpc, void * Lq_void, uint16_t len, uint8_t lifting_size) {
+static void LDPC_decode_one_iter (ldpc_decoder_t* ldpc) {
+
+    uint16_t lifting_size = ldpc->cfg.lifting_size;
 
     #if USE_SUM_PRODUCT
-        float * Lq = (float *) Lq_void;
+        float * Lq = ldpc->Lq;
         float * Lq_mj = ldpc->Lq_mj;
 
         float * prefix = ldpc->prefix; 
         float * suffix = ldpc->suffix;
     #else
-        ldpc_quantized_t * Lq = (ldpc_quantized_t *) Lq_void;
+        ldpc_quantized_t * Lq = ldpc->Lq;
         ldpc_quantized_t * Lq_mj = ldpc->Lq_mj;
 
         float alpha = ldpc->cfg.alpha;
@@ -264,9 +289,9 @@ static void LDPC_decode_one_iter (ldpc_decoder_t* ldpc, void * Lq_void, uint16_t
     }
 }
 
-uint16_t LDPC_decode (ldpc_decoder_t* ldpc, void * Lq, uint16_t len, uint8_t * decoded, uint16_t * num_iters) {
+uint16_t LDPC_decode (ldpc_decoder_t* ldpc, void * Lq, uint8_t * decoded, uint16_t * num_iters) {
 
-    uint8_t lifting_size = len/(ldpc->cfg.msg_size + ldpc->cfg.parity_size);
+    uint8_t lifting_size = ldpc->cfg.lifting_size;
 
     if (!is_valid_lifting_size(lifting_size)) {
         return 0;
@@ -275,16 +300,16 @@ uint16_t LDPC_decode (ldpc_decoder_t* ldpc, void * Lq, uint16_t len, uint8_t * d
     uint16_t iters = 0;
     uint16_t parity_check_errors = 0;
 
-    reset_decode_state (ldpc->R_mj, NUM_EDGES);
+    reset_decode_state (ldpc, Lq);
 
     for (iters = 0; iters < ldpc->cfg.max_iters; iters++) {
 
-        parity_check_errors = check_syndrome (ldpc, Lq, len, decoded);
+        parity_check_errors = check_syndrome (ldpc, decoded);
         if (parity_check_errors == 0) {
             break;
         }
 
-        LDPC_decode_one_iter (ldpc, Lq, len, lifting_size);
+        LDPC_decode_one_iter (ldpc);
     }
     
     *num_iters = iters;

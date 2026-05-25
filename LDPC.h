@@ -21,10 +21,8 @@ typedef enum {
 } lifting_mode_t;
 
 typedef struct {
-    //uint16_t msg_len;
-    //float rate;
-    uint8_t msg_size;
-    uint8_t parity_size;
+    uint16_t msg_len;
+    uint16_t target_code_len;
 
     uint8_t bgn;
 
@@ -33,10 +31,8 @@ typedef struct {
 } ldpc_encoder_cfg_t;
 
 typedef struct {
-    //uint16_t msg_len;
-    //float rate;
-    uint8_t msg_size;
-    uint8_t parity_size;
+    uint16_t msg_len;
+    uint16_t target_code_len;
 
     uint8_t bgn;
 
@@ -68,7 +64,7 @@ ldpc_decoder_cfg_t LDPC_get_decoder_config (ldpc_encoder_t* ldpc);
 uint8_t LDPC_set_encoder_config (ldpc_encoder_t* ldpc, ldpc_encoder_cfg_t cfg);
 uint8_t LDPC_set_decoder_config (ldpc_encoder_t* ldpc, ldpc_decoder_cfg_t cfg);
 
-uint8_t LDPC_encode (ldpc_encoder_t* ldpc, uint8_t * data, uint16_t len, uint8_t * parity);
-uint16_t LDPC_decode (ldpc_decoder_t* ldpc, void * Lq, uint16_t len, uint8_t * decoded, uint16_t* num_iters);
+uint8_t LDPC_encode (ldpc_encoder_t* ldpc, uint8_t * data, uint8_t * parity);
+uint16_t LDPC_decode (ldpc_decoder_t* ldpc, void * Lq, uint8_t * decoded, uint16_t* num_iters);
 
 #endif /* LDPC_H_ */

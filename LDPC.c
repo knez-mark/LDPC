@@ -48,34 +48,78 @@ static const uint8_t columnIndexMap_parity [NUM_EDGES_PARITY] = {0, 1, 0, 1, 2, 
                                                                  37, 38, 39, 40, 41, 2, 42, 3, 43, 0, 44, 45};
 
 uint8_t is_valid_lifting_size (uint16_t lifting_size) {
-    return (lifting_size == 32 || lifting_size == 16 || lifting_size == 8);
+    return (lifting_size == 256 || lifting_size == 128 || lifting_size == 64 || 
+            lifting_size == 32 || lifting_size == 16 || lifting_size == 8 || 
+            lifting_size == 4 || lifting_size == 2);
+}
+
+uint16_t lifting_sizes [] = {2, 4, 8, 16, 32, 64, 128, 256};
+
+uint16_t get_nearest_lifting_size (uint16_t msg_len) {
+    uint16_t lifting_size = (msg_len + BG1_COLS - BG1_ROWS - 1) / (BG1_COLS - BG1_ROWS);
+    for (int i = 0; i < sizeof (lifting_sizes); i++) {
+        if (lifting_sizes [i] > lifting_size) {
+            return lifting_sizes [i];
+        }
+    }
+    return 0;
 }
 
 ldpc_encoder_t* LDPC_encoder_create (ldpc_encoder_cfg_t cfg) {
-    if (cfg.msg_size > 22 || cfg.parity_size > 46 || cfg.bgn != 1) {
+    if (cfg.msg_len > 22*256 || cfg.bgn != 1) {
         return NULL;
     }
     
     ldpc_encoder_t* ldpc = LDPC_encoder_alloc ();
     if (ldpc == NULL) return NULL;
 
+    if (cfg.lifting_mode == LDPC_LIFTING_AUTO) {
+        cfg.lifting_size = get_nearest_lifting_size (cfg.msg_len);
+        if (cfg.lifting_size == 0) {
+            LDPC_encoder_free (ldpc);
+            return NULL;
+        }
+    }
+    else if (cfg.lifting_mode == LDPC_LIFTING_EXPLICIT) {
+        if (!is_valid_lifting_size (cfg.lifting_size)) {
+            LDPC_encoder_free (ldpc);
+            return NULL;
+        }
+    }
+    else {
+        LDPC_encoder_free (ldpc);
+        return NULL;
+    }
+
+    uint16_t msg_size = (cfg.msg_len + (cfg.lifting_size-1))/cfg.lifting_size;
+    uint16_t parity_size = (cfg.target_code_len - cfg.msg_len + (cfg.lifting_size-1)) / cfg.lifting_size;
+
+    if (msg_size > 22 || parity_size > 46) {
+        LDPC_encoder_free (ldpc);
+        return NULL;
+    }
+
+    ldpc->msg_size = msg_size;
+    ldpc->parity_size = parity_size;
+
+
     ldpc->A.rows = 4;
-    ldpc->A.cols = cfg.msg_size;
+    ldpc->A.cols = msg_size;
     
     ldpc->A.base_graph = base_graph_msg;
     ldpc->A.rowOffset = rowOffset_msg;
     ldpc->A.rowWeight = rowWeight_msg;
     ldpc->A.columnIndexMap = columnIndexMap_msg;
 
-    ldpc->C.rows = cfg.parity_size - 4;
-    ldpc->C.cols = cfg.msg_size;
+    ldpc->C.rows = parity_size - 4;
+    ldpc->C.cols = msg_size;
     
     ldpc->C.base_graph = base_graph_msg;
     ldpc->C.rowOffset = rowOffset_msg + 4;
     ldpc->C.rowWeight = rowWeight_msg + 4;
     ldpc->C.columnIndexMap = columnIndexMap_msg;
 
-    ldpc->D.rows = cfg.parity_size - 4;
+    ldpc->D.rows = parity_size - 4;
     ldpc->D.cols = 4;
     
     ldpc->D.base_graph = base_graph_parity;
@@ -89,23 +133,53 @@ ldpc_encoder_t* LDPC_encoder_create (ldpc_encoder_cfg_t cfg) {
 }
 
 ldpc_decoder_t* LDPC_decoder_create (ldpc_decoder_cfg_t cfg) {
-    if (cfg.msg_size > 22 || cfg.parity_size > 46 || cfg.bgn != 1) {
+    if (cfg.msg_len > 22*256 || cfg.bgn != 1) {
         return NULL;
     }
 
     ldpc_decoder_t* ldpc = LDPC_decoder_alloc ();
     if (ldpc == NULL) return NULL;
 
-    ldpc->Hm.rows = cfg.parity_size;
-    ldpc->Hm.cols = cfg.msg_size;
+    if (cfg.lifting_mode == LDPC_LIFTING_AUTO) {
+        cfg.lifting_size = get_nearest_lifting_size (cfg.msg_len);
+        if (cfg.lifting_size == 0) {
+            LDPC_decoder_free (ldpc);
+            return NULL;
+        }
+    }
+    else if (cfg.lifting_mode == LDPC_LIFTING_EXPLICIT){
+        if (!is_valid_lifting_size (cfg.lifting_size)) {
+            LDPC_decoder_free (ldpc);
+            return NULL;
+        }
+    }
+    else {
+        LDPC_decoder_free (ldpc);
+        return NULL;
+    }
+
+    uint16_t msg_size = (cfg.msg_len + (cfg.lifting_size-1))/cfg.lifting_size;
+    uint16_t parity_size = (cfg.target_code_len - cfg.msg_len + (cfg.lifting_size-1)) / cfg.lifting_size;
+
+    if (msg_size > 22 || parity_size > 46) {
+        LDPC_decoder_free (ldpc);
+        return NULL;
+    }
+
+    ldpc->msg_size = msg_size;
+    ldpc->parity_size = parity_size;
+
+
+    ldpc->Hm.rows = parity_size;
+    ldpc->Hm.cols = msg_size;
     
     ldpc->Hm.base_graph = base_graph_msg;
     ldpc->Hm.rowOffset = rowOffset_msg;
     ldpc->Hm.rowWeight = rowWeight_msg;
     ldpc->Hm.columnIndexMap = columnIndexMap_msg;
 
-    ldpc->Hp.rows = cfg.parity_size;
-    ldpc->Hp.cols = cfg.parity_size;
+    ldpc->Hp.rows = parity_size;
+    ldpc->Hp.cols = parity_size;
     
     ldpc->Hp.base_graph = base_graph_parity;
     ldpc->Hp.rowOffset = rowOffset_parity;

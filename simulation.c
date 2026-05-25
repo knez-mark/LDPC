@@ -160,12 +160,18 @@ float find_bit_error_rate2 (uint8_t msg_len, float noise_stddev) {
         ldpc_encoder_cfg_t ldpc_encoder_cfg;
         ldpc_decoder_cfg_t ldpc_decoder_cfg;
 
-        ldpc_encoder_cfg.msg_size = LDPC_msg_size_for_encoder;
-        ldpc_encoder_cfg.parity_size = LDPC_parity_size;
+        ldpc_encoder_cfg.msg_len = lifting_size*LDPC_msg_size_for_encoder;
+        ldpc_encoder_cfg.target_code_len = lifting_size*34;
         ldpc_encoder_cfg.bgn = 1;
-        ldpc_decoder_cfg.msg_size = LDPC_msg_size_for_encoder;
-        ldpc_decoder_cfg.parity_size = LDPC_parity_size;
+        ldpc_encoder_cfg.lifting_mode = LDPC_LIFTING_EXPLICIT;
+        ldpc_encoder_cfg.lifting_size = lifting_size;
+
+        ldpc_decoder_cfg.msg_len = lifting_size*LDPC_msg_size_for_encoder;
+        ldpc_decoder_cfg.target_code_len = lifting_size*34;
         ldpc_decoder_cfg.bgn = 1;
+        ldpc_decoder_cfg.lifting_mode = LDPC_LIFTING_EXPLICIT;
+        ldpc_decoder_cfg.lifting_size = lifting_size;
+
         #if !USE_SUM_PRODUCT
         ldpc_decoder_cfg.alpha = 0.75f;
         #endif
@@ -175,7 +181,7 @@ float find_bit_error_rate2 (uint8_t msg_len, float noise_stddev) {
         ldpc_decoder_t* ldpc_d = LDPC_decoder_create (ldpc_decoder_cfg);
 
         //Encode data
-        LDPC_encode (ldpc_e, (uint8_t *) &message, num_bytes*8, parity);
+        LDPC_encode (ldpc_e, (uint8_t *) &message, parity);
 
         encoding.ldpc[0] = message.msg_size;
         for (int i = 0; i < LDPC_msg_size_for_encoder*lifting_size/8 - 1; i++) {
@@ -203,7 +209,7 @@ float find_bit_error_rate2 (uint8_t msg_len, float noise_stddev) {
         #if USE_SUM_PRODUCT
         LDPC_decode (ldpc_d, bpsk_symbols, num_bytes*8, decoding.ldpc, &num_iters);
         #else
-        LDPC_decode (ldpc_d, quantized_symbols, num_bytes*8, decoding.ldpc, &num_iters);
+        LDPC_decode (ldpc_d, quantized_symbols, decoding.ldpc, &num_iters);
         #endif
         //Calculate BER
         bit_errors += calculate_bit_errors ((uint8_t*) &message, decoding.ldpc, LDPC_msg_size);

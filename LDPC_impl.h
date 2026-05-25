@@ -38,6 +38,9 @@ struct ldpc_encoder {
     uint8_t temp [(MAX_LIFTING_SIZE+(EIGHT_BITS_PER_BYTE-1))/EIGHT_BITS_PER_BYTE];
 
     ldpc_encoder_cfg_t cfg;
+
+    uint8_t msg_size;
+    uint8_t parity_size;
 };
 
 struct ldpc_decoder {
@@ -58,11 +61,18 @@ struct ldpc_decoder {
     float Lq_mj [MAX_ROW_WEIGHT];
     float prefix[MAX_ROW_WEIGHT];
     float suffix[MAX_ROW_WEIGHT];
+
+    float Lq [BG1_COLS*MAX_LIFTING_SIZE];
     #else
     ldpc_quantized_t Lq_mj [MAX_ROW_WEIGHT];
+
+    ldpc_quantized_t Lq [BG1_COLS*MAX_LIFTING_SIZE];
     #endif
 
     ldpc_decoder_cfg_t cfg;
+
+    uint8_t msg_size;
+    uint8_t parity_size;
 };
 
 uint8_t is_valid_lifting_size (uint16_t lifting_size);

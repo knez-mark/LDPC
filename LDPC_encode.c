@@ -33,11 +33,12 @@ static void mult_by_B_inv (uint8_t * input, uint8_t * result, uint16_t lifting_s
 
 }
 
-uint8_t LDPC_encode (ldpc_encoder_t* ldpc, uint8_t * data, uint16_t len, uint8_t * parity) {
+uint8_t LDPC_encode (ldpc_encoder_t* ldpc, uint8_t * data, uint8_t * parity) {
     //Encoding algorithm taken from "Low-Latency QC-LDPC Encoder Design for 5G NR"
     //by Tian et al.
 
-    uint8_t lifting_size = len/(ldpc->cfg.msg_size + ldpc->cfg.parity_size);
+    uint16_t lifting_size = ldpc->cfg.lifting_size;
+    uint16_t len = ldpc->cfg.msg_len;
 
     if (!is_valid_lifting_size(lifting_size)) {
         return 0;
