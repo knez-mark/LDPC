@@ -1,28 +1,7 @@
 #include "LDPC_impl.h"
 #include <string.h>
 
-void mult_by_B_inv (vector_t input, vector_t result, uint8_t lifting_size) {
-    if (lifting_size == 32) {
-        result.data32 [0] = input.data32 [0] ^ input.data32 [1] ^ input.data32 [2] ^ input.data32 [3];
-        result.data32 [1] = input.data32 [0] ^ ((result.data32 [0] >> 1) | (result.data32 [0] << 31));
-        result.data32 [3] = input.data32 [3] ^ ((result.data32 [0] >> 1) | (result.data32 [0] << 31));
-        result.data32 [2] = input.data32 [2] ^ result.data32 [3];
-    }
-    else if (lifting_size == 16) {
-        result.data16 [0] = input.data16 [0] ^ input.data16 [1] ^ input.data16 [2] ^ input.data16 [3];
-        result.data16 [1] = input.data16 [0] ^ ((result.data16 [0] >> 1) | (result.data16 [0] << 15));
-        result.data16 [3] = input.data16 [3] ^ ((result.data16 [0] >> 1) | (result.data16 [0] << 15));
-        result.data16 [2] = input.data16 [2] ^ result.data16 [3];
-    }
-    else { //lifting size of 8
-        result.data8 [0] = input.data8 [0] ^ input.data8 [1] ^ input.data8 [2] ^ input.data8 [3];
-        result.data8 [1] = input.data8 [0] ^ ((result.data8 [0] >> 1) | (result.data8 [0] << 7));
-        result.data8 [3] = input.data8 [3] ^ ((result.data8 [0] >> 1) | (result.data8 [0] << 7));
-        result.data8 [2] = input.data8 [2] ^ result.data8 [3];
-    }
-}
-
-static void mult_by_B_inv_general (uint8_t * input, uint8_t * result, uint16_t lifting_size) {
+static void mult_by_B_inv (uint8_t * input, uint8_t * result, uint16_t lifting_size) {
     uint16_t block_size = (lifting_size + (EIGHT_BITS_PER_BYTE - 1)) / EIGHT_BITS_PER_BYTE;
     
     vector_add4 (input, 
@@ -64,7 +43,6 @@ uint8_t LDPC_encode (ldpc_encoder_t* ldpc, uint8_t * data, uint16_t len, uint8_t
         return 0;
     }
 
-    //Maximum size is 4 * 32 bits
     uint8_t * A_mult_S = ldpc->A_mult_S;
     memset (A_mult_S, 0, sizeof (ldpc->A_mult_S));
     uint8_t * P1 = ldpc->parity;
@@ -83,19 +61,15 @@ uint8_t LDPC_encode (ldpc_encoder_t* ldpc, uint8_t * data, uint16_t len, uint8_t
     uint8_t * data_aligned = ldpc->data;
     get_byte_aligned(data, data_aligned, len, lifting_size);
 
-    circular_matrix_multiply_general (&ldpc->A, data_aligned, A_mult_S, temp, lifting_size);
-    //circular_matrix_multiply (&ldpc->A, (vector_t)data, (vector_t)A_mult_S, lifting_size);
+    circular_matrix_multiply (&ldpc->A, data_aligned, A_mult_S, temp, lifting_size);
     // 2) Find B^-1 * (A * S) to obtain P1
-    mult_by_B_inv_general (A_mult_S, P1, lifting_size);
-    //mult_by_B_inv ((vector_t)A_mult_S,(vector_t) P1, lifting_size);
+    mult_by_B_inv (A_mult_S, P1, lifting_size);
     // 3) Multiply D with P1
-    circular_matrix_multiply_general (&ldpc->D, P1, D_mult_P1, temp, lifting_size);
-    //circular_matrix_multiply (&ldpc->D, (vector_t) P1, (vector_t) D_mult_P1, lifting_size);
+    circular_matrix_multiply (&ldpc->D, P1, D_mult_P1, temp, lifting_size);
     // 4) Multiply C with S
-    circular_matrix_multiply_general (&ldpc->C, data_aligned, C_mult_S, temp, lifting_size);
-    //circular_matrix_multiply (&ldpc->C, (vector_t)data, (vector_t)C_mult_S, lifting_size);
+    circular_matrix_multiply (&ldpc->C, data_aligned, C_mult_S, temp, lifting_size);
     // 5) Add the results from 3) and 4)
-    vector_add2 (D_mult_P1, C_mult_S, P2, 8*ldpc->C.rows*((lifting_size + 7)/8));
+    vector_add2 (D_mult_P1, C_mult_S, P2, EIGHT_BITS_PER_BYTE*ldpc->C.rows*block_size);
 
     get_packed (P1, parity, (ldpc->A.rows + ldpc->C.rows)*lifting_size, lifting_size);
 

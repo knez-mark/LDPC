@@ -149,7 +149,77 @@ void get_packed(
     }
 }
 
-void circular_shift(
+static void circular_shift_32 (
+    uint32_t *input,
+    uint32_t *output,
+    uint16_t shift
+)
+{
+    *output = (*input >> (shift % 32)) | 
+                (*input << (32 - (shift % 32)));
+}
+
+static void circular_shift_16 (
+    uint16_t *input,
+    uint16_t *output,
+    uint16_t shift
+)
+{
+    *output = (*input >> (shift % 16)) | 
+                (*input << (16 - (shift % 16)));
+}
+
+static void circular_shift_8 (
+    uint8_t *input,
+    uint8_t *output,
+    uint16_t shift
+)
+{
+    *output = (*input >> (shift % 8)) | 
+                (*input << (8 - (shift % 8)));
+}
+
+void circular_shift_mult_of_byte(
+    uint8_t *input,
+    uint8_t *output,
+    uint16_t lifting_size,
+    uint16_t shift
+)
+{
+    shift %= lifting_size;
+
+    const uint16_t num_bytes =
+        (lifting_size + 7) >> 3;
+
+    const uint16_t byte_shift =
+        shift >> 3;
+
+    const uint8_t bit_shift =
+        shift & 7;
+
+
+    for (uint16_t i = 0;
+         i < num_bytes;
+         i++)
+    {
+        uint16_t src0 =
+            (i + byte_shift)
+            % num_bytes;
+
+        uint16_t src1 =
+            (src0 + 1)
+            % num_bytes;
+
+        output[i] =
+            (input[src0]
+                >> bit_shift)
+            |
+            (input[src1]
+                << (8 - bit_shift));
+    }
+}
+
+static void circular_shift_generic(
     uint8_t *input,
     uint8_t *output,
     uint16_t lifting_size,
@@ -173,7 +243,7 @@ void circular_shift(
          dst_bit < lifting_size;
          dst_bit++)
     {
-        //Right circular shift
+        //Left circular shift
         uint16_t src_bit =
             (dst_bit
              + lifting_size
@@ -193,34 +263,31 @@ void circular_shift(
     }
 }
 
-
-void circular_matrix_multiply (quasi_cyclic_matrix_t * H, vector_t x, vector_t b, uint8_t lifting_size) {
-
-    for (int j = 0; j < H->rows; j++) {
-
-        for (int i = 0; i < H->rowWeight[j]; i++) {
-            
-            if (H->columnIndexMap[H->rowOffset[j]+i] >= H->cols) {
-                break;
-            }
-
-            if (lifting_size == 32) {
-                b.data32 [j] ^= (x.data32 [H->columnIndexMap[H->rowOffset[j]+i]] >> H->base_graph[H->rowOffset[j]+i]%lifting_size) | 
-                (x.data32 [H->columnIndexMap[H->rowOffset[j]+i]] << (lifting_size - H->base_graph[H->rowOffset[j]+i]%lifting_size));
-            }
-            else if (lifting_size == 16) {
-                b.data16 [j] ^= (x.data16 [H->columnIndexMap[H->rowOffset[j]+i]] >> H->base_graph[H->rowOffset[j]+i]%lifting_size) | 
-                (x.data16 [H->columnIndexMap[H->rowOffset[j]+i]] << (lifting_size - H->base_graph[H->rowOffset[j]+i]%lifting_size));
-            }
-            else {
-                b.data8 [j] ^= (x.data8 [H->columnIndexMap[H->rowOffset[j]+i]] >> H->base_graph[H->rowOffset[j]+i]%lifting_size) | 
-                (x.data8 [H->columnIndexMap[H->rowOffset[j]+i]] << (lifting_size - H->base_graph[H->rowOffset[j]+i]%lifting_size));
-            }
-        }
+void circular_shift(
+    uint8_t *input,
+    uint8_t *output,
+    uint16_t lifting_size,
+    uint16_t shift
+)
+{
+    if (lifting_size == 32) {
+        circular_shift_32 ((uint32_t*)input, (uint32_t*)output, shift);
+    }
+    else if (lifting_size == 16) {
+        circular_shift_16 ((uint16_t*)input, (uint16_t*)output, shift);
+    }
+    else if (lifting_size == 8) {
+        circular_shift_8 ((uint8_t*)input, (uint8_t*)output, shift);
+    }
+    else if ((lifting_size % 8) == 0) {
+        circular_shift_mult_of_byte (input, output, lifting_size, shift);
+    }
+    else {
+        circular_shift_generic (input, output, lifting_size, shift);
     }
 }
 
-void circular_matrix_multiply_general (quasi_cyclic_matrix_t * H, uint8_t *x, uint8_t *b, uint8_t *temp, uint8_t lifting_size) {
+void circular_matrix_multiply (quasi_cyclic_matrix_t * H, uint8_t *x, uint8_t *b, uint8_t *temp, uint8_t lifting_size) {
 
     uint16_t block_size = (lifting_size + 7) / 8;
 

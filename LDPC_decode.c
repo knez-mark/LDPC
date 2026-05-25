@@ -145,12 +145,8 @@ static uint16_t check_syndrome (ldpc_decoder_t * ldpc, void * Lq, uint16_t len, 
     uint16_t block_size = (lifting_size + (EIGHT_BITS_PER_BYTE - 1)) / EIGHT_BITS_PER_BYTE;
     uint8_t* temp = ldpc->temp;
 
-    circular_matrix_multiply_general (&ldpc->Hm, codeword_aligned, syndrome, temp, lifting_size);
-    circular_matrix_multiply_general (&ldpc->Hp, codeword_aligned + ldpc->Hm.cols*block_size, syndrome, temp, lifting_size);
-    /*
-    circular_matrix_multiply (&ldpc->Hm, (vector_t)codeword, (vector_t)syndrome, lifting_size);
-    circular_matrix_multiply (&ldpc->Hp, (vector_t)(codeword + ldpc->Hm.cols*block_size), (vector_t)syndrome, lifting_size);
-    */
+    circular_matrix_multiply (&ldpc->Hm, codeword_aligned, syndrome, temp, lifting_size);
+    circular_matrix_multiply (&ldpc->Hp, codeword_aligned + ldpc->Hm.cols*block_size, syndrome, temp, lifting_size);
 
     return find_vector_weight ((vector_t) syndrome, ldpc->Hm.rows*block_size*EIGHT_BITS_PER_BYTE); //Returns number of parity check equation failures
 }
