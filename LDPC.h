@@ -10,7 +10,7 @@
 
 #define USE_SUM_PRODUCT 0
 
-#define MAX_LIFTING_SIZE 32
+#define MAX_LIFTING_SIZE 256
 
 //#define NUM_ENCODERS 0
 //#define NUM_DECODERS 1
@@ -59,7 +59,7 @@ void LDPC_encoder_destroy (ldpc_encoder_t* ldpc);
 void LDPC_decoder_destroy (ldpc_decoder_t* ldpc);
 
 ldpc_encoder_cfg_t LDPC_get_encoder_config (ldpc_encoder_t* ldpc);
-ldpc_decoder_cfg_t LDPC_get_decoder_config (ldpc_encoder_t* ldpc);
+ldpc_decoder_cfg_t LDPC_get_decoder_config (ldpc_decoder_t* ldpc);
 
 uint8_t LDPC_set_encoder_config (ldpc_encoder_t* ldpc, ldpc_encoder_cfg_t cfg);
 uint8_t LDPC_set_decoder_config (ldpc_encoder_t* ldpc, ldpc_decoder_cfg_t cfg);

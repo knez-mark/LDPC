@@ -55,18 +55,38 @@ uint8_t is_valid_lifting_size (uint16_t lifting_size) {
 
 uint16_t lifting_sizes [] = {2, 4, 8, 16, 32, 64, 128, 256};
 
-uint16_t get_nearest_lifting_size (uint16_t msg_len) {
+static uint16_t get_nearest_lifting_size (uint16_t msg_len, uint16_t code_len) {
     uint16_t lifting_size = (msg_len + BG1_COLS - BG1_ROWS - 1) / (BG1_COLS - BG1_ROWS);
-    for (int i = 0; i < sizeof (lifting_sizes); i++) {
-        if (lifting_sizes [i] > lifting_size) {
+    if ((code_len - msg_len + lifting_size - 1)/lifting_size > BG1_ROWS) {
+        lifting_size = (code_len - msg_len + BG1_ROWS - 1) / BG1_ROWS;
+    }
+
+    for (int i = 0; i < sizeof (lifting_sizes)/sizeof(uint16_t); i++) {
+        if (lifting_sizes [i] >= lifting_size) {
             return lifting_sizes [i];
         }
     }
+
     return 0;
 }
 
+ldpc_encoder_cfg_t LDPC_get_encoder_config (ldpc_encoder_t* ldpc) {
+    if (ldpc != NULL) {
+        return ldpc->cfg;
+    }
+    ldpc_encoder_cfg_t cfg = {0};
+    return cfg;
+}
+ldpc_decoder_cfg_t LDPC_get_decoder_config (ldpc_decoder_t* ldpc) {
+    if (ldpc != NULL) {
+        return ldpc->cfg;
+    }
+    ldpc_decoder_cfg_t cfg = {0};
+    return cfg;
+}
+
 ldpc_encoder_t* LDPC_encoder_create (ldpc_encoder_cfg_t cfg) {
-    if (cfg.msg_len > 22*256 || cfg.bgn != 1) {
+    if (cfg.msg_len > (BG1_COLS - BG1_ROWS)*MAX_LIFTING_SIZE || cfg.target_code_len > BG1_COLS*MAX_LIFTING_SIZE || cfg.msg_len > cfg.target_code_len || cfg.bgn != 1) {
         return NULL;
     }
     
@@ -74,7 +94,7 @@ ldpc_encoder_t* LDPC_encoder_create (ldpc_encoder_cfg_t cfg) {
     if (ldpc == NULL) return NULL;
 
     if (cfg.lifting_mode == LDPC_LIFTING_AUTO) {
-        cfg.lifting_size = get_nearest_lifting_size (cfg.msg_len);
+        cfg.lifting_size = get_nearest_lifting_size (cfg.msg_len, cfg.target_code_len);
         if (cfg.lifting_size == 0 || cfg.lifting_size > MAX_LIFTING_SIZE) {
             LDPC_encoder_free (ldpc);
             return NULL;
@@ -128,12 +148,12 @@ ldpc_encoder_t* LDPC_encoder_create (ldpc_encoder_cfg_t cfg) {
     ldpc->D.columnIndexMap = columnIndexMap_parity;
 
     ldpc->cfg = cfg;
-
+    
     return ldpc;
 }
 
 ldpc_decoder_t* LDPC_decoder_create (ldpc_decoder_cfg_t cfg) {
-    if (cfg.msg_len > 22*256 || cfg.bgn != 1) {
+    if (cfg.msg_len > (BG1_COLS - BG1_ROWS)*MAX_LIFTING_SIZE || cfg.target_code_len > BG1_COLS*MAX_LIFTING_SIZE || cfg.msg_len > cfg.target_code_len ||cfg.bgn != 1) {
         return NULL;
     }
 
@@ -141,7 +161,7 @@ ldpc_decoder_t* LDPC_decoder_create (ldpc_decoder_cfg_t cfg) {
     if (ldpc == NULL) return NULL;
 
     if (cfg.lifting_mode == LDPC_LIFTING_AUTO) {
-        cfg.lifting_size = get_nearest_lifting_size (cfg.msg_len);
+        cfg.lifting_size = get_nearest_lifting_size (cfg.msg_len, cfg.target_code_len);
         if (cfg.lifting_size == 0 || cfg.lifting_size > MAX_LIFTING_SIZE) {
             LDPC_decoder_free (ldpc);
             return NULL;
