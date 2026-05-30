@@ -6,9 +6,9 @@
 
 #define NUM_BITS_PER_BYTE 8
 
-#define NUM_EDGES_MSG 245
-#define NUM_EDGES_PARITY 71
-#define NUM_EDGES (NUM_EDGES_MSG + NUM_EDGES_PARITY)
+#define BG1_NUM_EDGES_MSG 245
+#define BG1_NUM_EDGES_PARITY 71
+#define BG1_NUM_EDGES (BG1_NUM_EDGES_MSG + BG1_NUM_EDGES_PARITY)
 #define BG1_ROWS 46
 #define BG1_COLS 68
 
@@ -53,7 +53,7 @@ struct ldpc_decoder {
 
     uint8_t temp [DIV_CEIL(MAX_LIFTING_SIZE_DECODE, NUM_BITS_PER_BYTE)];
 
-    lifting_struct R_mj [NUM_EDGES];
+    lifting_struct R_mj [BG1_NUM_EDGES];
 
     uint16_t columnOffset [MAX_ROW_WEIGHT];
 	uint16_t circular_shift [MAX_ROW_WEIGHT];
