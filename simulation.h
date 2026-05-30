@@ -3,6 +3,16 @@
 
 #include <stdint.h>
 
+typedef struct {
+    uint8_t  msg_size;
+    uint8_t  msg[255];
+} message_t;
+
+typedef struct {
+    uint32_t length_field;
+    uint8_t  ldpc[272];
+} encoded_t;
+
 #define MAX_TRANSMISSIONS 100000000
 #define TARGET_ERRORS 1000
 #define LDPC_NUM_ITERS 5

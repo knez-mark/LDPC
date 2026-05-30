@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include "matrix.h"
 #include "simulation.h"
-#include "frame.h"
 #include "LDPC.h"
 
 static void print_5bits(uint32_t value)
@@ -117,7 +116,7 @@ int main() {
     struct timespec start, end;
     FILE *fp = fopen("sim_data.csv", "w"); 
 
-    for (uint8_t msg_len = 0; msg_len < 88; msg_len ++) {
+    for (uint8_t msg_len = 21; msg_len < 88; msg_len +=22) {
 
         float BER_vals [65] = {0};
         int i = 0;

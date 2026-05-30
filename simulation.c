@@ -1,5 +1,4 @@
 #include "simulation.h"
-#include "frame.h"
 #include "LDPC.h"
 #include <stdlib.h>
 #include <stdio.h>
