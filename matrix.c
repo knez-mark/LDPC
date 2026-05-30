@@ -1,4 +1,4 @@
-#include "matrix.h"
+#include "LDPC_impl.h"
 #include <string.h>
 
 uint16_t find_vector_weight (uint8_t *x, uint16_t len) {
@@ -45,107 +45,66 @@ void vector_add4 (uint8_t *w, uint8_t *x, uint8_t *y, uint8_t *z, uint8_t *resul
     }
 }
 
-void get_byte_aligned(
-    uint8_t *input,
-    uint8_t *output,
-    uint16_t len_bits,
-    uint16_t lifting_size
-)
-{
-    uint16_t bytes_per_block =
-        (lifting_size + 7) >> 3;
+void get_byte_aligned(uint8_t *input, uint8_t *output, uint16_t len_bits, uint16_t lifting_size) {
+    uint16_t bytes_per_block = DIV_CEIL(lifting_size, NUM_BITS_PER_BYTE);
+    uint16_t n_blocks = DIV_CEIL(len_bits, lifting_size);
+    uint32_t output_size = n_blocks * bytes_per_block;
 
-    uint16_t n_blocks =
-        (len_bits + lifting_size - 1)
-        / lifting_size;
-
-    uint32_t output_size =
-        n_blocks * bytes_per_block;
+    if (lifting_size % 8 == 0) {
+        memcpy (output, input, output_size);
+        return;
+    }
 
     memset(output, 0, output_size);
 
-    for (uint32_t bit_idx = 0;
-         bit_idx < len_bits;
-         bit_idx++)
-    {
+    for (uint32_t bit_idx = 0; bit_idx < len_bits; bit_idx++) {
+        
         //Read input bit
-
         uint32_t in_byte = bit_idx >> 3;
-        uint32_t in_bit  = (bit_idx & 7);
+        uint32_t in_bit = (bit_idx & 7);
 
-        uint8_t bit =
-            (input[in_byte] >> in_bit) & 0x01;
+        uint8_t bit = (input[in_byte] >> in_bit) & 0x01;
 
         //Compute output location
+        uint32_t block = bit_idx / lifting_size;
+        uint32_t block_bit = bit_idx % lifting_size;
 
-        uint32_t block =
-            bit_idx / lifting_size;
-
-        uint32_t block_bit =
-            bit_idx % lifting_size;
-
-        uint32_t out_byte =
-            block * bytes_per_block
-            + (block_bit >> 3);
-
+        uint32_t out_byte = block * bytes_per_block + (block_bit >> 3);
         uint32_t out_bit = (block_bit & 7);
 
         //Write bit
-
-        output[out_byte] |=
-            bit << out_bit;
+        output[out_byte] |= bit << out_bit;
     }
 }
 
-void get_packed(
-    uint8_t *input,
-    uint8_t *output,
-    uint16_t len_bits,
-    uint16_t lifting_size
-)
-{
-    uint16_t bytes_per_block =
-        (lifting_size + 7) >> 3;
+void get_packed(uint8_t *input, uint8_t *output, uint16_t len_bits, uint16_t lifting_size) {
+    uint16_t bytes_per_block = DIV_CEIL(lifting_size, NUM_BITS_PER_BYTE);
+    uint16_t n_blocks = DIV_CEIL(len_bits, lifting_size);
+    uint32_t output_size = n_blocks * bytes_per_block;
 
-    uint16_t n_blocks =
-        (len_bits + lifting_size - 1)
-        / lifting_size;
-
-    uint32_t output_size =
-        (len_bits + 7) >> 3;
+    if (lifting_size % 8 == 0) {
+        memcpy (output, input, output_size);
+        return;
+    }
 
     memset(output, 0, output_size);
 
-    for (uint32_t bit_idx = 0;
-         bit_idx < len_bits;
-         bit_idx++)
+    for (uint32_t bit_idx = 0; bit_idx < len_bits; bit_idx++)
     {
         //Find source location
+        uint32_t block = bit_idx / lifting_size;
+        uint32_t block_bit = bit_idx % lifting_size;
 
-        uint32_t block =
-            bit_idx / lifting_size;
-
-        uint32_t block_bit =
-            bit_idx % lifting_size;
-
-        uint32_t in_byte =
-            block * bytes_per_block
-            + (block_bit >> 3);
-
+        uint32_t in_byte = block * bytes_per_block + (block_bit >> 3);
         uint32_t in_bit = (block_bit & 7);
 
-        uint8_t bit =
-            (input[in_byte] >> in_bit) & 0x01;
+        uint8_t bit = (input[in_byte] >> in_bit) & 0x01;
 
         //Write packed output
-
-        uint32_t out_byte =
-            bit_idx >> 3;
-
+        uint32_t out_byte = bit_idx >> 3;
         uint32_t out_bit = (bit_idx & 7);
 
-        output[out_byte] |=
-            bit << out_bit;
+        output[out_byte] |= bit << out_bit;
     }
 }
 
@@ -200,7 +159,6 @@ void circular_shift_mult_of_byte(
     const uint8_t bit_shift =
         shift & 7;
 
-
     for (uint16_t i = 0;
          i < num_bytes;
          i++)
@@ -232,13 +190,7 @@ static void circular_shift_generic(
     shift %= lifting_size;
 
     const uint16_t num_bytes =
-        (lifting_size + 7) >> 3;
-
-    const uint16_t byte_shift =
-        shift >> 3;
-
-    const uint8_t bit_shift =
-        shift & 0x07;
+        DIV_CEIL(lifting_size, NUM_BITS_PER_BYTE);
 
     memset(output, 0, num_bytes);
 
