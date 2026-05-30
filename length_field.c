@@ -26,7 +26,7 @@ uint32_t len_field_decode(uint32_t codeword)
 
     for (uint8_t msg = 1; msg < 64; msg++) {
         uint32_t diff = codeword ^ codewords[msg];
-        uint8_t d = find_vector_weight((vector_t)&diff, 32);
+        uint8_t d = find_vector_weight((uint8_t *) &diff, 32);
 
         if (d < best_dist) {
             best_dist = d;

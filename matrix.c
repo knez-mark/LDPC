@@ -1,18 +1,18 @@
 #include "matrix.h"
 #include <string.h>
 
-uint16_t find_vector_weight (vector_t x, uint16_t len) {
+uint16_t find_vector_weight (uint8_t *x, uint16_t len) {
     uint16_t weight = 0;
 
     uint16_t bytes = len / 8;
     uint16_t rem = len % 8;
 
     for (uint16_t i = 0; i < bytes; i++) {
-        weight += __builtin_popcount(x.data8[i]);
+        weight += __builtin_popcount(x[i]);
     }
 
     if (rem) {
-        uint8_t last = x.data8[bytes] & ((1 << rem) - 1);
+        uint8_t last = x[bytes] & ((1 << rem) - 1);
         weight += __builtin_popcount(last);
     }
 

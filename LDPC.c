@@ -20,7 +20,7 @@ ldpc_decoder_cfg_t LDPC_get_decoder_config (ldpc_decoder_t* ldpc) {
 }
 
 ldpc_encoder_t* LDPC_encoder_create (ldpc_encoder_cfg_t cfg) {
-    if (cfg.msg_len > (BG1_COLS - BG1_ROWS)*MAX_LIFTING_SIZE || cfg.target_code_len > BG1_COLS*MAX_LIFTING_SIZE || cfg.msg_len > cfg.target_code_len || cfg.bgn != 1) {
+    if (cfg.msg_len > (BG1_COLS - BG1_ROWS)*MAX_LIFTING_SIZE_ENCODE || cfg.target_code_len > BG1_COLS*MAX_LIFTING_SIZE_ENCODE || cfg.msg_len > cfg.target_code_len || cfg.bgn != 1) {
         return NULL;
     }
     
@@ -29,13 +29,13 @@ ldpc_encoder_t* LDPC_encoder_create (ldpc_encoder_cfg_t cfg) {
 
     if (cfg.lifting_mode == LDPC_LIFTING_AUTO) {
         cfg.lifting_size = get_nearest_lifting_size (cfg.msg_len, cfg.target_code_len);
-        if (cfg.lifting_size == 0 || cfg.lifting_size > MAX_LIFTING_SIZE) {
+        if (cfg.lifting_size == 0 || cfg.lifting_size > MAX_LIFTING_SIZE_ENCODE) {
             LDPC_encoder_free (ldpc);
             return NULL;
         }
     }
     else if (cfg.lifting_mode == LDPC_LIFTING_EXPLICIT) {
-        if (!is_valid_lifting_size (cfg.lifting_size) || cfg.lifting_size > MAX_LIFTING_SIZE) {
+        if (!is_valid_lifting_size (cfg.lifting_size) || cfg.lifting_size > MAX_LIFTING_SIZE_ENCODE) {
             LDPC_encoder_free (ldpc);
             return NULL;
         }
@@ -54,8 +54,8 @@ ldpc_encoder_t* LDPC_encoder_create (ldpc_encoder_cfg_t cfg) {
     const quasi_cyclic_matrix_t * BG1_msg = get_BG1_msg (set_index);
     const quasi_cyclic_matrix_t * BG1_parity = get_BG1_parity (set_index);
 
-    uint16_t msg_size = (cfg.msg_len + (cfg.lifting_size-1))/cfg.lifting_size;
-    uint16_t parity_size = (cfg.target_code_len - cfg.msg_len + (cfg.lifting_size-1)) / cfg.lifting_size;
+    uint16_t msg_size = DIV_CEIL(cfg.msg_len, cfg.lifting_size);
+    uint16_t parity_size = DIV_CEIL(cfg.target_code_len - cfg.msg_len, cfg.lifting_size);
 
     if (msg_size > 22 || parity_size > 46) {
         LDPC_encoder_free (ldpc);
@@ -96,7 +96,7 @@ ldpc_encoder_t* LDPC_encoder_create (ldpc_encoder_cfg_t cfg) {
 }
 
 ldpc_decoder_t* LDPC_decoder_create (ldpc_decoder_cfg_t cfg) {
-    if (cfg.msg_len > (BG1_COLS - BG1_ROWS)*MAX_LIFTING_SIZE || cfg.target_code_len > BG1_COLS*MAX_LIFTING_SIZE || cfg.msg_len > cfg.target_code_len ||cfg.bgn != 1) {
+    if (cfg.msg_len > (BG1_COLS - BG1_ROWS)*MAX_LIFTING_SIZE_DECODE || cfg.target_code_len > BG1_COLS*MAX_LIFTING_SIZE_DECODE || cfg.msg_len > cfg.target_code_len ||cfg.bgn != 1) {
         return NULL;
     }
 
@@ -105,13 +105,13 @@ ldpc_decoder_t* LDPC_decoder_create (ldpc_decoder_cfg_t cfg) {
 
     if (cfg.lifting_mode == LDPC_LIFTING_AUTO) {
         cfg.lifting_size = get_nearest_lifting_size (cfg.msg_len, cfg.target_code_len);
-        if (cfg.lifting_size == 0 || cfg.lifting_size > MAX_LIFTING_SIZE) {
+        if (cfg.lifting_size == 0 || cfg.lifting_size > MAX_LIFTING_SIZE_DECODE) {
             LDPC_decoder_free (ldpc);
             return NULL;
         }
     }
     else if (cfg.lifting_mode == LDPC_LIFTING_EXPLICIT){
-        if (!is_valid_lifting_size (cfg.lifting_size) || cfg.lifting_size > MAX_LIFTING_SIZE) {
+        if (!is_valid_lifting_size (cfg.lifting_size) || cfg.lifting_size > MAX_LIFTING_SIZE_DECODE) {
             LDPC_decoder_free (ldpc);
             return NULL;
         }
@@ -130,8 +130,8 @@ ldpc_decoder_t* LDPC_decoder_create (ldpc_decoder_cfg_t cfg) {
     const quasi_cyclic_matrix_t * BG1_msg = get_BG1_msg (set_index);
     const quasi_cyclic_matrix_t * BG1_parity = get_BG1_parity (set_index);
 
-    uint16_t msg_size = (cfg.msg_len + (cfg.lifting_size-1))/cfg.lifting_size;
-    uint16_t parity_size = (cfg.target_code_len - cfg.msg_len + (cfg.lifting_size-1)) / cfg.lifting_size;
+    uint16_t msg_size = DIV_CEIL(cfg.msg_len, cfg.lifting_size);
+    uint16_t parity_size = DIV_CEIL(cfg.target_code_len - cfg.msg_len, cfg.lifting_size);
 
     if (msg_size > 22 || parity_size > 46) {
         LDPC_decoder_free (ldpc);

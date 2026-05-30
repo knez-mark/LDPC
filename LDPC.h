@@ -3,17 +3,13 @@
 
 #include <stdint.h>
 
-#define LDPC_ENCODE_ENABLE 1
-#define LDPC_DECODE_ENABLE 1
-#define LDPC_BG1_ENABLE 1
-#define LDPC_BG2_ENABLE 0
-
 #define USE_SUM_PRODUCT 0
 
-#define MAX_LIFTING_SIZE 384
+#define MAX_LIFTING_SIZE_ENCODE 384
+#define MAX_LIFTING_SIZE_DECODE 384
 
-//#define NUM_ENCODERS 0
-//#define NUM_DECODERS 1
+#define NUM_ENCODERS 1
+#define NUM_DECODERS 1
 
 typedef enum {
     LDPC_LIFTING_AUTO,
@@ -49,8 +45,6 @@ typedef int8_t ldpc_quantized_t;
 
 typedef struct ldpc_encoder ldpc_encoder_t;
 typedef struct ldpc_decoder ldpc_decoder_t;
-
-void LDPC_memory_init (void);
 
 ldpc_encoder_t* LDPC_encoder_create (ldpc_encoder_cfg_t cfg);
 ldpc_decoder_t* LDPC_decoder_create (ldpc_decoder_cfg_t cfg);

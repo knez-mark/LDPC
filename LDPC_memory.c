@@ -3,40 +3,46 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-static ldpc_encoder_t encoders;
-static ldpc_decoder_t decoders;
+static ldpc_encoder_t encoders [NUM_ENCODERS];
+static ldpc_decoder_t decoders [NUM_DECODERS];
 
-static bool enc_in_use;
-static bool dec_in_use;
-
-void LDPC_memory_init (void) {
-    enc_in_use = false;
-
-    dec_in_use = false;
-}
+static bool enc_in_use [NUM_ENCODERS] = {false};
+static bool dec_in_use [NUM_DECODERS] = {false};
 
 ldpc_encoder_t* LDPC_encoder_alloc () {
-    if (enc_in_use) return NULL;
-    enc_in_use = 1;
-    return &encoders;
+    for (int i = 0; i < NUM_ENCODERS; i++) {
+        if (!enc_in_use[i]) {
+            enc_in_use[i] = true;
+            return &encoders[i];
+        }
+    }
+    return NULL;
 }
 
 ldpc_decoder_t* LDPC_decoder_alloc () {
-    if (dec_in_use) return NULL;
-    dec_in_use = 1;
-    return &decoders;
+    for (int i = 0; i < NUM_DECODERS; i++) {
+        if (!dec_in_use[i]) {
+            dec_in_use [i] = true;
+            return &decoders[i];
+        }
+    }
+    return NULL;
 }
 
 void LDPC_encoder_free (ldpc_encoder_t* encoder) {
-    if (encoder == &encoders) {
-        enc_in_use = 0;
+    for (int i = 0; i < NUM_ENCODERS; i++) {
+        if (encoder == &encoders[i]) {
+            enc_in_use[i] = false;
+            return;
+        }
     }
 }
 
 void LDPC_decoder_free (ldpc_decoder_t* decoder) {
-    if (decoder == &decoders) {
-        dec_in_use = 0;
+    for (int i = 0; i < NUM_DECODERS; i++) {
+        if (decoder == &decoders[i]) {
+            dec_in_use[i] = false;
+            return;
+        }
     }
 }
-
-

@@ -166,13 +166,13 @@ static uint16_t check_syndrome (ldpc_decoder_t * ldpc, uint8_t * codeword) {
 
     uint8_t* codeword_aligned = ldpc->codeword;
     get_byte_aligned (codeword, codeword_aligned, len, lifting_size);
-    uint16_t block_size = (lifting_size + (EIGHT_BITS_PER_BYTE - 1)) / EIGHT_BITS_PER_BYTE;
+    uint16_t block_size = (lifting_size + (NUM_BITS_PER_BYTE - 1)) / NUM_BITS_PER_BYTE;
     uint8_t* temp = ldpc->temp;
 
     circular_matrix_multiply (&ldpc->Hm, codeword_aligned, syndrome, temp, lifting_size);
     circular_matrix_multiply (&ldpc->Hp, codeword_aligned + ldpc->Hm.cols*block_size, syndrome, temp, lifting_size);
 
-    return find_vector_weight ((vector_t) syndrome, ldpc->Hm.rows*block_size*EIGHT_BITS_PER_BYTE); //Returns number of parity check equation failures
+    return find_vector_weight (syndrome, ldpc->Hm.rows*block_size*NUM_BITS_PER_BYTE); //Returns number of parity check equation failures
 }
 
 static void LDPC_decode_one_iter (ldpc_decoder_t* ldpc) {
@@ -297,7 +297,7 @@ uint16_t LDPC_decode (ldpc_decoder_t* ldpc, void * Lq, uint8_t * decoded, uint16
     if (!is_valid_lifting_size(lifting_size)) {
         return 0;
     }
-    
+
     uint16_t iters = 0;
     uint16_t parity_check_errors = 0;
 

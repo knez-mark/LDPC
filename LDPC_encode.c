@@ -8,7 +8,7 @@ typedef enum {
 } B_matrix_t;
 
 static void mult_by_B_inv (uint8_t * input, uint8_t * result, uint16_t lifting_size, B_matrix_t B_matrix) {
-    uint16_t block_size = (lifting_size + (EIGHT_BITS_PER_BYTE - 1)) / EIGHT_BITS_PER_BYTE;
+    uint16_t block_size = (lifting_size + (NUM_BITS_PER_BYTE - 1)) / NUM_BITS_PER_BYTE;
     
     if (B_matrix == BG1_B2) {
         vector_add4 (input, 
@@ -89,7 +89,7 @@ uint8_t LDPC_encode (ldpc_encoder_t* ldpc, uint8_t * data, uint8_t * parity) {
     uint8_t * C_mult_S = ldpc->C_mult_S;
     memset (C_mult_S, 0, sizeof (ldpc->C_mult_S));
     
-    uint16_t block_size = (lifting_size + (EIGHT_BITS_PER_BYTE - 1)) / EIGHT_BITS_PER_BYTE;
+    uint16_t block_size = DIV_CEIL(lifting_size, NUM_BITS_PER_BYTE);
     uint8_t * P2 = P1 + 4*block_size;
 
     uint8_t *temp = ldpc->temp;
@@ -113,7 +113,7 @@ uint8_t LDPC_encode (ldpc_encoder_t* ldpc, uint8_t * data, uint8_t * parity) {
     // 4) Multiply C with S
     circular_matrix_multiply (&ldpc->C, data_aligned, C_mult_S, temp, lifting_size);
     // 5) Add the results from 3) and 4)
-    vector_add2 (D_mult_P1, C_mult_S, P2, EIGHT_BITS_PER_BYTE*ldpc->C.rows*block_size);
+    vector_add2 (D_mult_P1, C_mult_S, P2, NUM_BITS_PER_BYTE*ldpc->C.rows*block_size);
 
     get_packed (P1, parity, (ldpc->A.rows + ldpc->C.rows)*lifting_size, lifting_size);
 

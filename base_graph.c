@@ -351,8 +351,8 @@ uint8_t is_valid_lifting_size (uint16_t lifting_size) {
 }
 
 uint16_t get_nearest_lifting_size (uint16_t msg_len, uint16_t code_len) {
-    uint16_t lifting_size = (msg_len + BG1_COLS - BG1_ROWS - 1) / (BG1_COLS - BG1_ROWS);
-    if ((code_len - msg_len + lifting_size - 1)/lifting_size > BG1_ROWS) {
+    uint16_t lifting_size = DIV_CEIL(msg_len, BG1_COLS - BG1_ROWS);
+    if (DIV_CEIL(code_len - msg_len, lifting_size) > BG1_ROWS) {
         lifting_size = (code_len - msg_len + BG1_ROWS - 1) / BG1_ROWS;
     }
 
