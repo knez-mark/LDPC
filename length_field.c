@@ -1,5 +1,7 @@
-#include "matrix.h"
+#include "LDPC_impl.h"
+#if USE_SUM_PRODUCT
 #include <float.h>
+#endif
 
 //All 64 possible codewords for a [32, 6] linear block code
 static uint32_t codewords[64] = {
@@ -37,13 +39,24 @@ uint32_t len_field_decode(uint32_t codeword)
     return codewords[best];
 }
 
-uint32_t len_field_decode_soft(float* llr)
+uint32_t len_field_decode_soft(void* llr_void)
 {
     uint8_t best = 1;
+    #if USE_SUM_PRODUCT
     float best_dist = FLT_MAX;
+    float *llr = (float *) llr_void;
+    #else
+    int64_t best_dist = INT64_MAX;
+    ldpc_quantized_t *llr = (ldpc_quantized_t *) llr_void;
+    #endif
 
     for (uint8_t msg = 1; msg < 64; msg++) {
+        #if USE_SUM_PRODUCT
         float d = 0;
+        #else
+        int64_t d = 0;
+        #endif
+
         for (uint8_t bit = 0; bit < 32; bit++) {
             uint8_t b = (codewords[msg] >> bit) & 1;
             d += b ? llr[bit]: -llr[bit];

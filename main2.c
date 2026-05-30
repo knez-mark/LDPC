@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include "matrix.h"
 #include "simulation.h"
-#include "length_field.h"
 #include "frame.h"
 #include "LDPC.h"
 

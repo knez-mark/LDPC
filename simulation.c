@@ -1,7 +1,6 @@
 #include "simulation.h"
 #include "frame.h"
 #include "LDPC.h"
-#include "length_field.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
