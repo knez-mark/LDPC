@@ -10,7 +10,7 @@
 
 #define USE_SUM_PRODUCT 0
 
-#define MAX_LIFTING_SIZE 256
+#define MAX_LIFTING_SIZE 384
 
 //#define NUM_ENCODERS 0
 //#define NUM_DECODERS 1

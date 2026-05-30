@@ -253,10 +253,12 @@ float find_bit_error_rate3 (uint8_t msg_len, float noise_stddev) {
 
         uint16_t num_bytes;
         if (message.msg_size < 5) {
-            num_bytes = 12;
+            num_bytes = 34;
+            //num_bytes = 12;
         }
         else if (message.msg_size < 11) {
-            num_bytes = 17;
+            num_bytes = 34;
+            //num_bytes = 17;
         }
         else if (message.msg_size < 22) {
             num_bytes = 34;

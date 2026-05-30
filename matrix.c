@@ -155,8 +155,9 @@ static void circular_shift_32 (
     uint16_t shift
 )
 {
-    *output = (*input >> (shift % 32)) | 
-                (*input << (32 - (shift % 32)));
+    shift &= 31;
+    *output = (*input >> shift) | 
+                (*input << (32 - shift));
 }
 
 static void circular_shift_16 (
@@ -165,8 +166,9 @@ static void circular_shift_16 (
     uint16_t shift
 )
 {
-    *output = (*input >> (shift % 16)) | 
-                (*input << (16 - (shift % 16)));
+    shift &= 15;
+    *output = (*input >> shift) | 
+                (*input << (16 - shift));
 }
 
 static void circular_shift_8 (
@@ -175,8 +177,9 @@ static void circular_shift_8 (
     uint16_t shift
 )
 {
-    *output = (*input >> (shift % 8)) | 
-                (*input << (8 - (shift % 8)));
+    shift &= 7;
+    *output = (*input >> shift) | 
+                (*input << (8 - shift));
 }
 
 void circular_shift_mult_of_byte(
@@ -294,7 +297,7 @@ void circular_matrix_multiply (quasi_cyclic_matrix_t * H, uint8_t *x, uint8_t *b
     for (int j = 0; j < H->rows; j++) {
 
         const uint8_t *col = &H->columnIndexMap[H->rowOffset[j]];
-        const uint8_t *base_graph = &H->base_graph[H->rowOffset[j]];
+        const uint16_t *base_graph = &H->base_graph[H->rowOffset[j]];
 
         for (int i = 0; i < H->rowWeight[j]; i++) {
             

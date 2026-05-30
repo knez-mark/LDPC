@@ -75,6 +75,4 @@ struct ldpc_decoder {
     uint8_t parity_size;
 };
 
-uint8_t is_valid_lifting_size (uint16_t lifting_size);
-
 #endif /* LDPC_IMPL_H_ */

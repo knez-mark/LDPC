@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "LDPC_impl.h"
+#include "base_graph.h"
 #if USE_SUM_PRODUCT
 #include <float.h>
 #include <math.h>
@@ -202,7 +203,7 @@ static void LDPC_decode_one_iter (ldpc_decoder_t* ldpc) {
 
         uint8_t rowWeight = 0;
         const uint8_t *col = &Hm->columnIndexMap[Hm->rowOffset[m]];
-        const uint8_t *base_graph = &Hm->base_graph[Hm->rowOffset[m]];
+        const uint16_t *base_graph = &Hm->base_graph[Hm->rowOffset[m]];
 
 		for (int k = 0; k < Hm->rowWeight[m]; k++) {
             if (col[k] >= Hm->cols) {
@@ -296,7 +297,7 @@ uint16_t LDPC_decode (ldpc_decoder_t* ldpc, void * Lq, uint8_t * decoded, uint16
     if (!is_valid_lifting_size(lifting_size)) {
         return 0;
     }
-
+    
     uint16_t iters = 0;
     uint16_t parity_check_errors = 0;
 

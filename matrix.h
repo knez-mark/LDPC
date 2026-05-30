@@ -7,7 +7,7 @@ typedef struct {
     uint8_t rows;
     uint8_t cols;
 
-    const uint8_t *base_graph;
+    const uint16_t *base_graph;
     struct {
         const uint16_t *rowOffset;
         const uint8_t *rowWeight;
