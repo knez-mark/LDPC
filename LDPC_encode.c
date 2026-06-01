@@ -2,15 +2,38 @@
 #include "base_graph.h"
 #include <string.h>
 
-typedef enum {
-    BG1_B1,
-    BG1_B2
-} B_matrix_t;
-
-static void mult_by_B_inv (uint8_t * input, uint8_t * result, uint16_t lifting_size, B_matrix_t B_matrix) {
+static void mult_by_B_inv (B_matrix_t B, uint8_t * input, uint8_t * result, uint16_t lifting_size) {
     uint16_t block_size = (lifting_size + (NUM_BITS_PER_BYTE - 1)) / NUM_BITS_PER_BYTE;
-    
-    if (B_matrix == BG1_B2) {
+
+    if (B == BG1_B1) {
+        vector_add4 (input, 
+                    input + 1*block_size, 
+                    input + 2*block_size, 
+                    input + 3*block_size, 
+                    result, 
+                    lifting_size);
+        
+        circular_shift (result, 
+                        result + 3*block_size,
+                        lifting_size,
+                        1);
+
+        vector_add2 (input,
+                    result + 3*block_size,
+                    result + 1*block_size,
+                    lifting_size);
+
+        vector_add2 (input + 3*block_size,
+                    result + 3*block_size,
+                    result + 3*block_size,
+                    lifting_size);
+
+        vector_add2 (input + 2*block_size,
+                    result + 3*block_size,
+                    result + 2*block_size,
+                    lifting_size);
+    }
+    else if (B == BG1_B2) {
         vector_add4 (input, 
                     input + 1*block_size, 
                     input + 2*block_size, 
@@ -38,6 +61,34 @@ static void mult_by_B_inv (uint8_t * input, uint8_t * result, uint16_t lifting_s
                     result + 2*block_size,
                     lifting_size);   
     }
+    else if (B == BG2_B1) {
+        vector_add4 (input, 
+                    input + 1*block_size, 
+                    input + 2*block_size, 
+                    input + 3*block_size, 
+                    result + 1*block_size, 
+                    lifting_size);
+        
+        circular_shift (result + 1*block_size,  
+                        result,
+                        lifting_size,
+                        lifting_size - 1);
+        
+        vector_add2 (input,
+                    result,
+                    result + 1*block_size,
+                    lifting_size);
+
+        vector_add2 (input + 1*block_size,
+                    result + 1*block_size,
+                    result + 2*block_size,
+                    lifting_size);
+
+        vector_add2 (input + 3*block_size,
+                    result,
+                    result + 3*block_size,
+                    lifting_size);
+    }
     else {
         vector_add4 (input, 
                     input + 1*block_size, 
@@ -45,24 +96,24 @@ static void mult_by_B_inv (uint8_t * input, uint8_t * result, uint16_t lifting_s
                     input + 3*block_size, 
                     result, 
                     lifting_size);
-        
-        circular_shift (result, 
-                        result + 3*block_size,
+
+        circular_shift (result,  
+                        result + 1*block_size,
                         lifting_size,
                         1);
 
-        vector_add2 (input,
+        vector_add2 (input + 3*block_size,
+                    result + 1*block_size,
                     result + 3*block_size,
+                    lifting_size);
+
+        vector_add2 (input,
+                    result + 1*block_size,
                     result + 1*block_size,
                     lifting_size);
 
-        vector_add2 (input + 3*block_size,
-                    result + 3*block_size,
-                    result + 3*block_size,
-                    lifting_size);
-
-        vector_add2 (input + 2*block_size,
-                    result + 3*block_size,
+        vector_add2 (input + 1*block_size,
+                    result + 1*block_size,
                     result + 2*block_size,
                     lifting_size);
     }
@@ -100,14 +151,7 @@ uint8_t LDPC_encode (ldpc_encoder_t* ldpc, uint8_t * data, uint8_t * parity) {
 
     circular_matrix_multiply (&ldpc->A, data_aligned, A_mult_S, temp, lifting_size);
     // 2) Find B^-1 * (A * S) to obtain P1
-    B_matrix_t B_matrix;
-    if (lifting_size == 13 || lifting_size == 26 || lifting_size == 52 || lifting_size == 104 || lifting_size == 208) {
-        B_matrix = BG1_B2;
-    }
-    else {
-        B_matrix = BG1_B1;
-    }
-    mult_by_B_inv (A_mult_S, P1, lifting_size, B_matrix);
+    mult_by_B_inv (ldpc->B, A_mult_S, P1, lifting_size);
     // 3) Multiply D with P1
     circular_matrix_multiply (&ldpc->D, P1, D_mult_P1, temp, lifting_size);
     // 4) Multiply C with S

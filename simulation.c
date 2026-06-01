@@ -343,3 +343,126 @@ float find_bit_error_rate3 (uint8_t msg_len, float noise_stddev) {
 
     return (float)bit_errors/num_transmissions;
 }
+
+//Use reduced PCM
+float find_bit_error_rate_BG2 (uint8_t msg_len, float noise_stddev) {
+
+    uint32_t num_transmissions = 0;
+    uint32_t bit_errors = 0;
+    uint16_t num_iters;
+
+    while (num_transmissions < MAX_TRANSMISSIONS && bit_errors < TARGET_ERRORS) {
+        static message_t message = {0};
+
+        static encoded_t encoding = {0};
+        static encoded_t decoding = {0};
+
+        static uint8_t parity [272] = {0};
+
+        static float bpsk_symbols [272*8] = {0};
+        static ldpc_quantized_t quantized_symbols [272*8] = {0};
+        
+        memset (&message, 0, sizeof (message_t));
+        memset (&encoding, 0, sizeof (encoded_t));
+        memset (&decoding, 0, sizeof (encoded_t));
+        memset (parity, 0, sizeof (parity));
+        memset (bpsk_symbols, 0, sizeof (bpsk_symbols));
+        memset (quantized_symbols, 0, sizeof (quantized_symbols));
+
+        //Generate message
+        message.msg_size = msg_len;
+        generate_random_bytes(message.msg, message.msg_size);
+
+        uint16_t num_bytes;
+        if (message.msg_size < 10) {
+            num_bytes = 34;
+            //num_bytes = 17;
+        }
+        else if (message.msg_size < 20) {
+            num_bytes = 34;
+        }
+        else if (message.msg_size < 40) {
+            num_bytes = 34*2;
+        }
+        else if (message.msg_size < 60) {
+            num_bytes = 34*3;
+        }
+        else if (message.msg_size < 80) {
+            num_bytes = 34*4;
+        }
+        else {
+            num_bytes = 34*5;
+        }
+
+        uint8_t lifting_size;
+
+        ldpc_encoder_cfg_t ldpc_encoder_cfg = {0};
+        ldpc_decoder_cfg_t ldpc_decoder_cfg = {0};
+
+        ldpc_encoder_cfg.msg_len = 8*(msg_len + 1);
+        //ldpc_encoder_cfg.target_code_len = ldpc_encoder_cfg.msg_len/((float)22/34);
+        //ldpc_encoder_cfg.target_code_len = 8*((ldpc_encoder_cfg.target_code_len + 7)/8);
+        ldpc_encoder_cfg.target_code_len = 8*num_bytes;
+        ldpc_encoder_cfg.bgn = 2;
+        ldpc_encoder_cfg.lifting_mode = LDPC_LIFTING_AUTO;
+
+        ldpc_decoder_cfg.msg_len = 8*(msg_len + 1);
+        //ldpc_decoder_cfg.target_code_len = ldpc_encoder_cfg.msg_len/((float)22/34);
+        //ldpc_decoder_cfg.target_code_len = 8*((ldpc_decoder_cfg.target_code_len + 7)/8);
+        ldpc_decoder_cfg.target_code_len = 8*num_bytes;
+        ldpc_decoder_cfg.bgn = 2;
+        ldpc_decoder_cfg.lifting_mode = LDPC_LIFTING_AUTO;
+
+        #if !USE_SUM_PRODUCT
+        ldpc_decoder_cfg.alpha = 0.75f;
+        #endif
+        ldpc_decoder_cfg.max_iters = LDPC_NUM_ITERS;
+
+        ldpc_encoder_t* ldpc_e = LDPC_encoder_create (ldpc_encoder_cfg);
+        ldpc_decoder_t* ldpc_d = LDPC_decoder_create (ldpc_decoder_cfg);
+
+        //Encode data
+        LDPC_encode (ldpc_e, (uint8_t *) &message, parity);
+
+        encoding.ldpc[0] = message.msg_size;
+        for (int i = 0; i < message.msg_size; i++) {
+            encoding.ldpc[1+i] = message.msg[i];
+        }
+        for (int i = message.msg_size + 1; i < (ldpc_decoder_cfg.target_code_len + 7)/8; i++) {
+            encoding.ldpc[i] = parity [i - (message.msg_size + 1)];
+        }
+
+        //Transmit through channel
+        uint16_t num_bits = bytes_to_bpsk(encoding.ldpc, (ldpc_decoder_cfg.target_code_len + 7)/8, bpsk_symbols);
+        add_awgn(bpsk_symbols, ldpc_decoder_cfg.target_code_len, noise_stddev);
+
+        ldpc_encoder_cfg = LDPC_get_encoder_config (ldpc_e);
+        ldpc_decoder_cfg = LDPC_get_decoder_config (ldpc_d);
+
+        if (num_transmissions == 0) {
+            printf ("lifting size: %d\n", ldpc_encoder_cfg.lifting_size);
+            printf ("codeword len: %d\n", ldpc_encoder_cfg.target_code_len);
+        }
+
+        for (int i = 0; i < 2*ldpc_decoder_cfg.lifting_size; i++) {
+            bpsk_symbols [i] = 0;
+        }
+
+        quantize (bpsk_symbols, ldpc_decoder_cfg.target_code_len, quantized_symbols);
+
+        //Decode message
+        #if USE_SUM_PRODUCT
+        LDPC_decode (ldpc_d, bpsk_symbols, num_bytes*8, decoding.ldpc, &num_iters);
+        #else
+        LDPC_decode (ldpc_d, quantized_symbols, decoding.ldpc, &num_iters);
+        #endif
+        //Calculate BER
+        bit_errors += calculate_bit_errors ((uint8_t*) &message, decoding.ldpc, msg_len + 1);
+        num_transmissions += 8*(msg_len + 1);
+
+        LDPC_encoder_destroy (ldpc_e);
+        LDPC_decoder_destroy (ldpc_d);
+    }
+
+    return (float)bit_errors/num_transmissions;
+}

@@ -25,5 +25,6 @@ void add_awgn(float *symbols, uint16_t len, float noise_stddev);
 
 float find_bit_error_rate2 (uint8_t msg_len, float noise_stddev);
 float find_bit_error_rate3 (uint8_t msg_len, float noise_stddev);
+float find_bit_error_rate_BG2 (uint8_t msg_len, float noise_stddev);
 
 #endif /* SIMULATION_H_ */

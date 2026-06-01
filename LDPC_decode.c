@@ -166,7 +166,7 @@ static uint16_t check_syndrome (ldpc_decoder_t * ldpc, uint8_t * codeword) {
 
     uint8_t* codeword_aligned = ldpc->codeword;
     get_byte_aligned (codeword, codeword_aligned, len, lifting_size);
-    uint16_t block_size = (lifting_size + (NUM_BITS_PER_BYTE - 1)) / NUM_BITS_PER_BYTE;
+    uint16_t block_size = DIV_CEIL(lifting_size, NUM_BITS_PER_BYTE);
     uint8_t* temp = ldpc->temp;
 
     circular_matrix_multiply (&ldpc->Hm, codeword_aligned, syndrome, temp, lifting_size);
