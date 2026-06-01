@@ -55,3 +55,10 @@ dkms.conf
 
 # DS Store files
 .DS_Store
+
+#VS Code files
+.vscode/
+
+# Simulation files
+Data/
+sim_data.csv

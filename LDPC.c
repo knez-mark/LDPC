@@ -1,134 +1,230 @@
-#include "LDPC.h"
+#include "LDPC_impl.h"
 #include "matrix.h"
+#include "base_graph.h"
+#include "LDPC_memory.h"
+#include <stddef.h>
 
-//"Condensed" base graph
-static const uint8_t base_graph [NUM_EDGES] = {250, 69, 226, 159, 100, 10, 59, 229, 110, 191, 9, 195, 23, 190, 35, 239, 31, 1, 0, 
-                                               2, 239, 117, 124, 71, 222, 104, 173, 220, 102, 109, 132, 142, 155, 255, 28, 0, 0, 0, 
-                                               106, 111, 185, 63, 117, 93, 229, 177, 95, 39, 142, 225, 225, 245, 205, 251, 117, 0, 0, 
-                                               121, 89, 84, 20, 150, 131, 243, 136, 86, 246, 219, 211, 240, 76, 244, 144, 12, 1, 0, 
-                                               157, 102, 0, 205, 236, 194, 231, 28, 123, 115, 0, 183, 22, 28, 67, 244, 11, 157, 211, 0, 
-                                               220, 44, 159, 31, 167, 104, 0, 112, 4, 7, 211, 102, 164, 109, 241, 90, 0, 103, 182, 109, 
-                                               21, 142, 14, 61, 216, 0, 98, 149, 167, 160, 49, 58, 0, 77, 41, 83, 182, 78, 252, 22, 0};
-
-static const uint16_t rowOffset [BG1_ROWS] = {0, 19, 38, 57, 76, 79, 87, 96, 103, 113, 122, 129};
-
-static const uint8_t rowWeight [BG1_ROWS] = {19, 19, 19, 19, 3, 8, 9, 7, 10, 9, 7, 8};
-
-static const uint8_t columnIndexMap [NUM_EDGES] = {0, 1, 2, 3, 5, 6, 9, 10, 11, 12, 13, 15, 16, 18, 19, 20, 21, 22, 23, 0, 2, 3, 4, 5, 7, 8, 9, 
-                                                   11, 12, 14, 15, 16, 17, 19, 21, 22, 23, 24, 0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 13, 14, 15, 17, 18, 19, 
-                                                   20, 24, 25, 0, 1, 3, 4, 6, 7, 8, 10, 11, 12, 13, 14, 16, 17, 18, 20, 21, 22, 25, 0, 1, 26, 0, 1, 3, 
-                                                   12, 16, 21, 22, 27, 0, 6, 10, 11, 13, 17, 18, 20, 28, 0, 1, 4, 7, 8, 14, 29, 0, 1, 3, 12, 16, 19, 
-                                                   21, 22, 24, 30, 0, 1, 10, 11, 13, 17, 18, 20, 31, 1, 2, 4, 7, 8, 14, 32, 0, 1, 12, 16, 21, 22, 23, 33};
-
-// For "D" matrix
-static const uint8_t D_matrix_base_graph [] = {115, 241, 90, 252, 22};
-
-static const uint16_t D_matrix_rowOffset [] = {0, 0, 1, 1, 1, 3, 3, 3};
-
-static const uint8_t D_matrix_rowWeight [] = {0, 1, 0, 0, 2, 0, 0, 2};
-
-static const uint8_t D_matrix_columnIndexMap [] = {0, 0, 2, 0, 1};
-//Original base graph
-/*
-static const uint8_t base_graph [NUM_EDGES] = {250, 69, 226, 159, 100, 10, 59, 229, 110, 191, 9, 195, 23, 190, 35, 239, 31, 1, 0, 
-                                               2, 239, 117, 124, 71, 222, 104, 173, 220, 102, 109, 132, 142, 155, 255, 28, 0, 0, 0, 
-                                               106, 111, 185, 63, 117, 93, 229, 177, 95, 39, 142, 225, 225, 245, 205, 251, 117, 0, 0, 
-                                               121, 89, 84, 20, 150, 131, 243, 136, 86, 246, 219, 211, 240, 76, 244, 144, 12, 1, 0, 
-                                               157, 102, 0, 205, 236, 194, 231, 28, 123, 115, 0, 183, 22, 28, 67, 244, 11, 157, 211, 0, 
-                                               220, 44, 159, 31, 167, 104, 0, 112, 4, 7, 211, 102, 164, 109, 241, 90, 0, 103, 182, 109, 
-                                               21, 142, 14, 61, 216, 0, 98, 149, 167, 160, 49, 58, 0, 77, 41, 83, 182, 78, 252, 22, 0, 
-                                               160, 42, 21, 32, 234, 7, 0, 177, 248, 151, 185, 62, 0, 206, 55, 206, 127, 16, 229, 0, 40, 
-                                               96, 65, 63, 75, 179, 0, 64, 49, 49, 51, 154, 0, 7, 164, 59, 1, 144, 0, 42, 233, 8, 155, 
-                                               147, 0, 60, 73, 72, 127, 224, 0, 151, 186, 217, 47, 160, 0, 249, 121, 109, 131, 171, 0, 64, 
-                                               142, 188, 158, 0, 156, 147, 170, 152, 0, 112, 86, 236, 116, 222, 0, 23, 136, 116, 182, 0, 195, 
-                                               243, 215, 61, 0, 25, 104, 194, 0, 128, 165, 181, 63, 0, 86, 236, 84, 6, 0, 216, 73, 120, 9, 0, 
-                                               95, 177, 172, 61, 0, 221, 112, 199, 121, 0, 2, 187, 41, 211, 0, 127, 167, 164, 159, 0, 161, 197, 
-                                               207, 103, 0, 37, 105, 51, 120, 0, 198, 220, 122, 0, 167, 151, 157, 163, 0, 173, 139, 149, 0, 0, 
-                                               157, 137, 149, 0, 167, 173, 139, 151, 0, 149, 157, 137, 0, 151, 163, 173, 139, 0, 139, 157, 163, 
-                                               173, 0, 149, 151, 167, 0};
-
-static const uint16_t rowOffset [BG1_ROWS] = {0, 19, 38, 57, 76, 79, 87, 96, 103, 113, 122, 129, 137, 144, 150, 157, 164, 170, 176, 182, 188, 194, 200, 205, 
-                                             210, 216, 221, 226, 230, 235, 240, 245, 250, 255, 260, 265, 270, 275, 279, 284, 289, 293, 298, 302, 307, 312};
-
-static const uint8_t rowWeight [BG1_ROWS] = {19, 19, 19, 19, 3, 8, 9, 7, 10, 9, 7, 8, 7, 6, 7, 7, 6, 6, 6, 6, 6, 6, 5, 5, 6, 5, 5, 4, 5, 5, 5, 
-                                             5, 5, 5, 5, 5, 5, 4, 5, 5, 4, 5, 4, 5, 5, 4};
-
-static const uint8_t columnIndexMap [NUM_EDGES] = {0, 1, 2, 3, 5, 6, 9, 10, 11, 12, 13, 15, 16, 18, 19, 20, 21, 22, 23, 0, 2, 3, 4, 5, 7, 8, 9, 
-                                                   11, 12, 14, 15, 16, 17, 19, 21, 22, 23, 24, 0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 13, 14, 15, 17, 18, 19, 
-                                                   20, 24, 25, 0, 1, 3, 4, 6, 7, 8, 10, 11, 12, 13, 14, 16, 17, 18, 20, 21, 22, 25, 0, 1, 26, 0, 1, 3, 
-                                                   12, 16, 21, 22, 27, 0, 6, 10, 11, 13, 17, 18, 20, 28, 0, 1, 4, 7, 8, 14, 29, 0, 1, 3, 12, 16, 19, 
-                                                   21, 22, 24, 30, 0, 1, 10, 11, 13, 17, 18, 20, 31, 1, 2, 4, 7, 8, 14, 32, 0, 1, 12, 16, 21, 22, 23, 33, 
-                                                   0, 1, 10, 11, 13, 18, 34, 0, 3, 7, 20, 23, 35, 0, 12, 15, 16, 17, 21, 36, 0, 1, 10, 13, 18, 25, 37, 
-                                                   1, 3, 11, 20, 22, 38, 0, 14, 16, 17, 21, 39, 1, 12, 13, 18, 19, 40, 0, 1, 7, 8, 10, 41, 0, 3, 9, 11, 22, 
-                                                   42, 1, 5, 16, 20, 21, 43, 0, 12, 13, 17, 44, 1, 2, 10, 18, 45, 0, 3, 4, 11, 22, 46, 1, 6, 7, 14, 47, 
-                                                   0, 2, 4, 15, 48, 1, 6, 8, 49, 0, 4, 19, 21, 50, 1, 14, 18, 25, 51, 0, 10, 13, 24, 52, 1, 7, 22, 25, 53, 
-                                                   0, 12, 14, 24, 54, 1, 2, 11, 21, 55, 0, 7, 15, 17, 56, 1, 6, 12, 22, 57, 0, 14, 15, 18, 58, 1, 13, 23, 59, 
-                                                   0, 9, 10, 12, 60, 1, 3, 7, 19, 61, 0, 8, 17, 62, 1, 3, 9, 18, 63, 0, 4, 24, 64, 1, 16, 18, 25, 65, 
-                                                   0, 7, 9, 22, 66, 1, 6, 10, 67};
-
-// For "D" matrix
-static const uint8_t D_matrix_base_graph [] = {115, 241, 90, 252, 22, 62, 179, 154, 160, 222, 6, 9, 172, 61, 121, 103, 122, 137, 139, 173};
-
-static const uint16_t D_matrix_rowOffset [] = {0, 0, 1, 1, 1, 3, 3, 3, 5, 5, 6, 6, 7, 8, 8, 8, 8, 9, 9, 9, 9, 10, 10, 10,
-                                              10, 10, 11, 12, 14, 15, 15, 15, 16, 16, 17, 17, 17, 17, 17, 18, 19, 20};
-
-static const uint8_t D_matrix_rowWeight [] = {0, 1, 0, 0, 2, 0, 0, 2, 0, 1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 
-                                              0, 1, 1, 2, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0};
-
-static const uint8_t D_matrix_columnIndexMap [] = {0, 0, 2, 0, 1, 1, 3, 0, 0, 0, 3, 2, 0, 3, 2, 0, 1, 2, 3, 0};
-*/
-
-static quasi_cyclic_matrix_t H;
-static quasi_cyclic_matrix_t A;
-static quasi_cyclic_matrix_t C;
-static quasi_cyclic_matrix_t D;
-
-quasi_cyclic_matrix_t* get_H () {
-    return &H;
+ldpc_encoder_cfg_t LDPC_get_encoder_config (ldpc_encoder_t* ldpc) {
+    if (ldpc != NULL) {
+        return ldpc->cfg;
+    }
+    ldpc_encoder_cfg_t cfg = {0};
+    return cfg;
+}
+ldpc_decoder_cfg_t LDPC_get_decoder_config (ldpc_decoder_t* ldpc) {
+    if (ldpc != NULL) {
+        return ldpc->cfg;
+    }
+    ldpc_decoder_cfg_t cfg = {0};
+    return cfg;
 }
 
-quasi_cyclic_matrix_t* get_A () {
-    return &A;
+ldpc_encoder_t* LDPC_encoder_create (ldpc_encoder_cfg_t cfg) {
+    
+    if (cfg.msg_len > cfg.target_code_len) {
+        return NULL;
+    }
+    
+    if (cfg.bgn == 1) {
+        if (cfg.msg_len > (BG1_COLS - BG1_ROWS)*MAX_LIFTING_SIZE_ENCODE || cfg.target_code_len > BG1_COLS*MAX_LIFTING_SIZE_ENCODE) {
+            return NULL;
+        }
+    }
+    else if (cfg.bgn == 2) {
+        if (cfg.msg_len > (BG2_COLS - BG2_ROWS)*MAX_LIFTING_SIZE_ENCODE || cfg.target_code_len > BG2_COLS*MAX_LIFTING_SIZE_ENCODE) {
+            return NULL;
+        }
+    }
+    else {
+        return NULL;
+    }
+    
+    ldpc_encoder_t* ldpc = LDPC_encoder_alloc ();
+    if (ldpc == NULL) return NULL;
+
+    if (cfg.lifting_mode == LDPC_LIFTING_AUTO) {
+        cfg.lifting_size = get_nearest_lifting_size (cfg.msg_len, cfg.target_code_len, cfg.bgn);
+        if (cfg.lifting_size == 0 || cfg.lifting_size > MAX_LIFTING_SIZE_ENCODE) {
+            LDPC_encoder_free (ldpc);
+            return NULL;
+        }
+    }
+    else if (cfg.lifting_mode == LDPC_LIFTING_EXPLICIT) {
+        if (!is_valid_lifting_size (cfg.lifting_size) || cfg.lifting_size > MAX_LIFTING_SIZE_ENCODE) {
+            LDPC_encoder_free (ldpc);
+            return NULL;
+        }
+    }
+    else {
+        LDPC_encoder_free (ldpc);
+        return NULL;
+    }
+
+    int8_t set_index = get_set_index (cfg.lifting_size);
+    if (set_index == -1) {
+        LDPC_encoder_free (ldpc);
+        return NULL;
+    }
+
+    if (cfg.bgn == 1) {
+        if (set_index == 6) {
+            ldpc->B = BG1_B2;
+        }
+        else {
+            ldpc->B = BG1_B1;
+        }
+    }
+    else {
+        if (set_index == 3 || set_index == 7) {
+            ldpc->B = BG2_B2;
+        }
+        else {
+            ldpc->B = BG2_B1;
+        }
+    }
+
+    const quasi_cyclic_matrix_t * BG_msg = (cfg.bgn == 1) ? get_BG1_msg (set_index) : get_BG2_msg (set_index);
+    const quasi_cyclic_matrix_t * BG_parity = (cfg.bgn == 1) ? get_BG1_parity (set_index) : get_BG2_parity (set_index);
+    
+
+    uint16_t msg_size = DIV_CEIL(cfg.msg_len, cfg.lifting_size);
+    uint16_t parity_size = DIV_CEIL(cfg.target_code_len - cfg.msg_len, cfg.lifting_size);
+
+    if (cfg.bgn == 1 && (msg_size > (BG1_COLS - BG1_ROWS) || parity_size > BG1_ROWS)) {
+        LDPC_encoder_free (ldpc);
+        return NULL;
+    }
+    if (cfg.bgn == 2 && (msg_size > (BG2_COLS - BG2_ROWS) || parity_size > BG2_ROWS)) {
+        LDPC_encoder_free (ldpc);
+        return NULL;
+    }
+
+    ldpc->msg_size = msg_size;
+    ldpc->parity_size = parity_size;
+
+
+    ldpc->A.rows = 4;
+    ldpc->A.cols = msg_size;
+    
+    ldpc->A.base_graph = BG_msg->base_graph;
+    ldpc->A.rowOffset = BG_msg->rowOffset;
+    ldpc->A.rowWeight = BG_msg->rowWeight;
+    ldpc->A.columnIndexMap = BG_msg->columnIndexMap;
+
+    ldpc->C.rows = parity_size - 4;
+    ldpc->C.cols = msg_size;
+    
+    ldpc->C.base_graph = BG_msg->base_graph;
+    ldpc->C.rowOffset = BG_msg->rowOffset + 4;
+    ldpc->C.rowWeight = BG_msg->rowWeight + 4;
+    ldpc->C.columnIndexMap = BG_msg->columnIndexMap;
+
+    ldpc->D.rows = parity_size - 4;
+    ldpc->D.cols = 4;
+    
+    ldpc->D.base_graph = BG_parity->base_graph;
+    ldpc->D.rowOffset = BG_parity->rowOffset + 4;
+    ldpc->D.rowWeight = BG_parity->rowWeight + 4;
+    ldpc->D.columnIndexMap = BG_parity->columnIndexMap;
+
+    ldpc->cfg = cfg;
+    
+    return ldpc;
 }
 
-quasi_cyclic_matrix_t* get_C () {
-    return &C;
+ldpc_decoder_t* LDPC_decoder_create (ldpc_decoder_cfg_t cfg) {
+    
+    if (cfg.msg_len > cfg.target_code_len) {
+        return NULL;
+    }
+    
+    if (cfg.bgn == 1) {
+        if (cfg.msg_len > (BG1_COLS - BG1_ROWS)*MAX_LIFTING_SIZE_DECODE || cfg.target_code_len > BG1_COLS*MAX_LIFTING_SIZE_DECODE) {
+            return NULL;
+        }
+    }
+    else if (cfg.bgn == 2) {
+        if (cfg.msg_len > (BG2_COLS - BG2_ROWS)*MAX_LIFTING_SIZE_DECODE || cfg.target_code_len > BG2_COLS*MAX_LIFTING_SIZE_DECODE) {
+            return NULL;
+        }
+    }
+    else {
+        return NULL;
+    }
+
+    ldpc_decoder_t* ldpc = LDPC_decoder_alloc ();
+    if (ldpc == NULL) return NULL;
+
+    if (cfg.lifting_mode == LDPC_LIFTING_AUTO) {
+        cfg.lifting_size = get_nearest_lifting_size (cfg.msg_len, cfg.target_code_len, cfg.bgn);
+        if (cfg.lifting_size == 0 || cfg.lifting_size > MAX_LIFTING_SIZE_DECODE) {
+            LDPC_decoder_free (ldpc);
+            return NULL;
+        }
+    }
+    else if (cfg.lifting_mode == LDPC_LIFTING_EXPLICIT) {
+        if (!is_valid_lifting_size (cfg.lifting_size) || cfg.lifting_size > MAX_LIFTING_SIZE_DECODE) {
+            LDPC_decoder_free (ldpc);
+            return NULL;
+        }
+    }
+    else {
+        LDPC_decoder_free (ldpc);
+        return NULL;
+    }
+    
+    int8_t set_index = get_set_index (cfg.lifting_size);
+    if (set_index == -1) {
+        LDPC_decoder_free (ldpc);
+        return NULL;
+    }
+
+    const quasi_cyclic_matrix_t * BG_msg = (cfg.bgn == 1) ? get_BG1_msg (set_index) : get_BG2_msg (set_index);
+    const quasi_cyclic_matrix_t * BG_parity = (cfg.bgn == 1) ? get_BG1_parity (set_index) : get_BG2_parity (set_index);
+
+    uint16_t msg_size = DIV_CEIL(cfg.msg_len, cfg.lifting_size);
+    uint16_t parity_size = DIV_CEIL(cfg.target_code_len - cfg.msg_len, cfg.lifting_size);
+
+    if (cfg.bgn == 1 && (msg_size > (BG1_COLS - BG1_ROWS) || parity_size > BG1_ROWS)) {
+        LDPC_decoder_free (ldpc);
+        return NULL;
+    }
+    if (cfg.bgn == 2 && (msg_size > (BG2_COLS - BG2_ROWS) || parity_size > BG2_ROWS)) {
+        LDPC_decoder_free (ldpc);
+        return NULL;
+    }
+
+    ldpc->msg_size = msg_size;
+    ldpc->parity_size = parity_size;
+
+
+    ldpc->Hm.rows = parity_size;
+    ldpc->Hm.cols = msg_size;
+    
+    ldpc->Hm.base_graph = BG_msg->base_graph;
+    ldpc->Hm.rowOffset = BG_msg->rowOffset;
+    ldpc->Hm.rowWeight = BG_msg->rowWeight;
+    ldpc->Hm.columnIndexMap = BG_msg->columnIndexMap;
+
+    ldpc->Hp.rows = parity_size;
+    ldpc->Hp.cols = parity_size;
+    
+    ldpc->Hp.base_graph = BG_parity->base_graph;
+    ldpc->Hp.rowOffset = BG_parity->rowOffset;
+    ldpc->Hp.rowWeight = BG_parity->rowWeight;
+    ldpc->Hp.columnIndexMap = BG_parity->columnIndexMap;
+
+    ldpc->cfg = cfg;
+
+    return ldpc;
 }
 
-quasi_cyclic_matrix_t* get_D () {
-    return &D;
+void LDPC_encoder_destroy (ldpc_encoder_t* ldpc) {
+    if (ldpc == NULL) return;
+    LDPC_encoder_free (ldpc);
 }
 
-void LDPC_init () {
-    H.rows = BG1_ROWS;
-    H.cols = BG1_COLS;
-    
-    H.base_graph = base_graph;
-    H.rowOffset = rowOffset;
-    H.rowWeight = rowWeight;
-    H.columnIndexMap = columnIndexMap;
-
-    A.rows = 4;
-    A.cols = 22;
-    
-    A.base_graph = base_graph;
-    A.rowOffset = rowOffset;
-    A.rowWeight = rowWeight;
-    A.columnIndexMap = columnIndexMap;
-
-    C.rows = BG1_ROWS - 4;
-    C.cols = 22;
-    
-    C.base_graph = base_graph;
-    C.rowOffset = rowOffset + 4;
-    C.rowWeight = rowWeight + 4;
-    C.columnIndexMap = columnIndexMap;
-
-    D.rows = BG1_ROWS - 4;
-    D.cols = 4;
-    
-    D.base_graph = D_matrix_base_graph;
-    D.rowOffset = D_matrix_rowOffset;
-    D.rowWeight = D_matrix_rowWeight;
-    D.columnIndexMap = D_matrix_columnIndexMap;
+void LDPC_decoder_destroy (ldpc_decoder_t* ldpc) {
+    if (ldpc == NULL) return;
+    LDPC_decoder_free (ldpc);
 }

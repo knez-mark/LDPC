@@ -3,7 +3,7 @@ Efficient implementation of a 5G-NR LDPC encoder/decoder in C
 
 In order to run the LDPC decoder, run the following commands:
 ```bash
-gcc main.c LDPC_decode.c LDPC.c minsum.c matrix.c -o main
+gcc main.c simulation.c matrix.c length_field.c LDPC_decode.c LDPC.c LDPC_encode.c LDPC_memory.c base_graph.c -o main
 ```
 ```bash
 ./main
