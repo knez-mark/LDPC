@@ -16,6 +16,11 @@ typedef enum {
     LDPC_LIFTING_EXPLICIT
 } lifting_mode_t;
 
+typedef enum {
+    LDPC_CONFIG_FAILURE,
+    LDPC_CONFIG_SUCCESS
+} ldpc_config_status_t;
+
 typedef struct {
     uint16_t msg_len;
     uint16_t target_code_len;
@@ -55,14 +60,14 @@ void LDPC_decoder_destroy (ldpc_decoder_t* ldpc);
 ldpc_encoder_cfg_t LDPC_get_encoder_config (ldpc_encoder_t* ldpc);
 ldpc_decoder_cfg_t LDPC_get_decoder_config (ldpc_decoder_t* ldpc);
 
-uint8_t LDPC_set_encoder_config (ldpc_encoder_t* ldpc, ldpc_encoder_cfg_t cfg);
-uint8_t LDPC_set_decoder_config (ldpc_encoder_t* ldpc, ldpc_decoder_cfg_t cfg);
+ldpc_config_status_t LDPC_set_encoder_config (ldpc_encoder_t* ldpc, ldpc_encoder_cfg_t cfg);
+ldpc_config_status_t LDPC_set_decoder_config (ldpc_decoder_t* ldpc, ldpc_decoder_cfg_t cfg);
 
 uint8_t LDPC_encode (ldpc_encoder_t* ldpc, uint8_t * data, uint8_t * parity);
 uint16_t LDPC_decode (ldpc_decoder_t* ldpc, void * Lq, uint8_t * decoded, uint16_t* num_iters);
 
-uint32_t len_field_encode(uint8_t msg);
-uint32_t len_field_decode(uint32_t codeword);
-uint32_t len_field_decode_soft(void* llr);
+uint32_t len_field_encode (uint8_t msg);
+uint32_t len_field_decode (uint32_t codeword);
+uint32_t len_field_decode_soft (void* llr);
 
 #endif /* LDPC_H_ */
