@@ -288,6 +288,7 @@ float find_bit_error_rate3 (uint8_t msg_len, float noise_stddev) {
         //ldpc_decoder_cfg.target_code_len = 8*((ldpc_decoder_cfg.target_code_len + 7)/8);
         ldpc_decoder_cfg.target_code_len = 8*num_bytes;
         ldpc_decoder_cfg.bgn = 1;
+        ldpc_decoder_cfg.use_full_PCM = false;
         ldpc_decoder_cfg.lifting_mode = LDPC_LIFTING_AUTO;
 
         #if !USE_SUM_PRODUCT

@@ -237,7 +237,18 @@ ldpc_decoder_t* LDPC_decoder_create (ldpc_decoder_cfg_t cfg) {
     const quasi_cyclic_matrix_t * BG_parity = (cfg.bgn == 1) ? get_BG1_parity (set_index) : get_BG2_parity (set_index);
 
     uint16_t msg_size = DIV_CEIL(cfg.msg_len, cfg.lifting_size);
-    uint16_t parity_size = DIV_CEIL(cfg.target_code_len - cfg.msg_len, cfg.lifting_size);
+    uint16_t parity_size;
+    if (cfg.use_full_PCM) {
+        if (cfg.bgn == 1) {
+            parity_size = BG1_ROWS;
+        }
+        else {
+            parity_size = BG2_ROWS;
+        }
+    }
+    else {
+        parity_size = DIV_CEIL(cfg.target_code_len - cfg.msg_len, cfg.lifting_size);
+    }
 
     ldpc->msg_size = msg_size;
     ldpc->parity_size = parity_size;

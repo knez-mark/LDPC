@@ -2,6 +2,7 @@
 #define LDPC_H_
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #define USE_SUM_PRODUCT 0
 
@@ -41,6 +42,7 @@ typedef struct {
         float alpha;
     #endif
     uint16_t max_iters;
+    bool use_full_PCM;
 
     lifting_mode_t lifting_mode;
     uint16_t lifting_size;
