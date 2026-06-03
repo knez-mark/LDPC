@@ -26,7 +26,7 @@ int main() {
             clock_gettime(CLOCK_MONOTONIC, &start);
 
             float sigma = sqrt(1.0 / (2.0 * pow(10.0, EbN0_dB / 10.0))); 
-            float BER = find_bit_error_rate3 (msg_len, sigma);
+            float BER = find_bit_error_rate (msg_len, sigma);
 
             clock_gettime(CLOCK_MONOTONIC, &end);
 
