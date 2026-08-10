@@ -95,72 +95,6 @@ ldpc_config_status_t LDPC_set_encoder_config (ldpc_encoder_t* ldpc, ldpc_encoder
         cfg.lifting_size = get_nearest_lifting_size (cfg.msg_len, cfg.target_code_len, cfg.bgn);
     }
     ldpc->cfg = cfg;
-    return LDPC_CONFIG_SUCCESS;
-
-}
-
-ldpc_config_status_t LDPC_set_decoder_config (ldpc_decoder_t* ldpc, ldpc_decoder_cfg_t cfg) {
-    
-    if (ldpc == NULL) return LDPC_CONFIG_FAILURE;
-
-    ldpc_common_cfg_t common = {
-        .msg_len = cfg.msg_len,
-        .target_code_len = cfg.target_code_len,
-
-        .bgn = cfg.bgn,
-
-        .lifting_mode = cfg.lifting_mode,
-        .lifting_size = cfg.lifting_size,
-        .max_lifting_size = MAX_LIFTING_SIZE_DECODE
-    };
-    
-    ldpc_config_status_t status = LDPC_validate_common_config (common);
-    if (status == LDPC_CONFIG_FAILURE) return LDPC_CONFIG_FAILURE;
-
-    #if !USE_SUM_PRODUCT
-        if (cfg.alpha > 1.0f || cfg.alpha <= 0.0f) {
-            return LDPC_CONFIG_FAILURE;
-        }
-    #endif
-
-    if (common.lifting_mode == LDPC_LIFTING_AUTO) {
-        cfg.lifting_size = get_nearest_lifting_size (cfg.msg_len, cfg.target_code_len, cfg.bgn);
-    }
-    ldpc->cfg = cfg;
-    return LDPC_CONFIG_SUCCESS;
-
-}
-
-
-ldpc_encoder_cfg_t LDPC_get_encoder_config (ldpc_encoder_t* ldpc) {
-    if (ldpc != NULL) {
-        return ldpc->cfg;
-    }
-    ldpc_encoder_cfg_t cfg = {0};
-    return cfg;
-}
-
-ldpc_decoder_cfg_t LDPC_get_decoder_config (ldpc_decoder_t* ldpc) {
-    if (ldpc != NULL) {
-        return ldpc->cfg;
-    }
-    ldpc_decoder_cfg_t cfg = {0};
-    return cfg;
-}
-
-ldpc_encoder_t* LDPC_encoder_create (ldpc_encoder_cfg_t cfg) {
-    
-    ldpc_encoder_t* ldpc = LDPC_encoder_alloc ();
-    if (ldpc == NULL) return NULL;
-
-    ldpc_config_status_t status = LDPC_set_encoder_config (ldpc, cfg);
-
-    if (status == LDPC_CONFIG_FAILURE) {
-        LDPC_encoder_free (ldpc);
-        return NULL;
-    }
-
-    cfg = ldpc->cfg;
 
     int8_t set_index = get_set_index (cfg.lifting_size);
 
@@ -213,23 +147,39 @@ ldpc_encoder_t* LDPC_encoder_create (ldpc_encoder_cfg_t cfg) {
     ldpc->D.rowOffset = BG_parity->rowOffset + 4;
     ldpc->D.rowWeight = BG_parity->rowWeight + 4;
     ldpc->D.columnIndexMap = BG_parity->columnIndexMap;
-    
-    return ldpc;
+
+    return LDPC_CONFIG_SUCCESS;
+
 }
 
-ldpc_decoder_t* LDPC_decoder_create (ldpc_decoder_cfg_t cfg) {
+ldpc_config_status_t LDPC_set_decoder_config (ldpc_decoder_t* ldpc, ldpc_decoder_cfg_t cfg) {
     
-    ldpc_decoder_t* ldpc = LDPC_decoder_alloc ();
-    if (ldpc == NULL) return NULL;  
+    if (ldpc == NULL) return LDPC_CONFIG_FAILURE;
 
-    ldpc_config_status_t status = LDPC_set_decoder_config (ldpc, cfg);
+    ldpc_common_cfg_t common = {
+        .msg_len = cfg.msg_len,
+        .target_code_len = cfg.target_code_len,
 
-    if (status == LDPC_CONFIG_FAILURE) {
-        LDPC_decoder_free (ldpc);
-        return NULL;
+        .bgn = cfg.bgn,
+
+        .lifting_mode = cfg.lifting_mode,
+        .lifting_size = cfg.lifting_size,
+        .max_lifting_size = MAX_LIFTING_SIZE_DECODE
+    };
+    
+    ldpc_config_status_t status = LDPC_validate_common_config (common);
+    if (status == LDPC_CONFIG_FAILURE) return LDPC_CONFIG_FAILURE;
+
+    #if !USE_SUM_PRODUCT
+        if (cfg.alpha > 1.0f || cfg.alpha <= 0.0f) {
+            return LDPC_CONFIG_FAILURE;
+        }
+    #endif
+
+    if (common.lifting_mode == LDPC_LIFTING_AUTO) {
+        cfg.lifting_size = get_nearest_lifting_size (cfg.msg_len, cfg.target_code_len, cfg.bgn);
     }
-
-    cfg = ldpc->cfg;
+    ldpc->cfg = cfg;
 
     int8_t set_index = get_set_index (cfg.lifting_size);
 
@@ -268,6 +218,54 @@ ldpc_decoder_t* LDPC_decoder_create (ldpc_decoder_cfg_t cfg) {
     ldpc->Hp.rowOffset = BG_parity->rowOffset;
     ldpc->Hp.rowWeight = BG_parity->rowWeight;
     ldpc->Hp.columnIndexMap = BG_parity->columnIndexMap;
+
+    return LDPC_CONFIG_SUCCESS;
+
+}
+
+
+ldpc_encoder_cfg_t LDPC_get_encoder_config (ldpc_encoder_t* ldpc) {
+    if (ldpc != NULL) {
+        return ldpc->cfg;
+    }
+    ldpc_encoder_cfg_t cfg = {0};
+    return cfg;
+}
+
+ldpc_decoder_cfg_t LDPC_get_decoder_config (ldpc_decoder_t* ldpc) {
+    if (ldpc != NULL) {
+        return ldpc->cfg;
+    }
+    ldpc_decoder_cfg_t cfg = {0};
+    return cfg;
+}
+
+ldpc_encoder_t* LDPC_encoder_create (ldpc_encoder_cfg_t cfg) {
+    
+    ldpc_encoder_t* ldpc = LDPC_encoder_alloc ();
+    if (ldpc == NULL) return NULL;
+
+    ldpc_config_status_t status = LDPC_set_encoder_config (ldpc, cfg);
+
+    if (status == LDPC_CONFIG_FAILURE) {
+        LDPC_encoder_free (ldpc);
+        return NULL;
+    }
+    
+    return ldpc;
+}
+
+ldpc_decoder_t* LDPC_decoder_create (ldpc_decoder_cfg_t cfg) {
+    
+    ldpc_decoder_t* ldpc = LDPC_decoder_alloc ();
+    if (ldpc == NULL) return NULL;  
+
+    ldpc_config_status_t status = LDPC_set_decoder_config (ldpc, cfg);
+
+    if (status == LDPC_CONFIG_FAILURE) {
+        LDPC_decoder_free (ldpc);
+        return NULL;
+    }
 
     return ldpc;
 }

@@ -8,11 +8,10 @@ typedef struct {
     uint8_t cols;
 
     const uint16_t *base_graph;
-    struct {
-        const uint16_t *rowOffset;
-        const uint8_t *rowWeight;
-        const uint8_t *columnIndexMap;
-    };
+
+    const uint16_t *rowOffset;
+    const uint8_t *rowWeight;
+    const uint8_t *columnIndexMap;
 } quasi_cyclic_matrix_t;
 
 uint16_t find_vector_weight (uint8_t *x, uint16_t len);
