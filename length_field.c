@@ -59,7 +59,7 @@ uint32_t len_field_decode_soft(void* llr_void)
 
         for (uint8_t bit = 0; bit < 32; bit++) {
             uint8_t b = (codewords[msg] >> bit) & 1;
-            d += b ? llr[bit]: -llr[bit];
+            d += b*llr[bit];
         }
 
         if (d < best_dist) {
