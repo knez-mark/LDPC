@@ -253,7 +253,7 @@ float find_bit_error_rate (uint8_t msg_len, float noise_stddev) {
 
         //Decode message
         #if USE_SUM_PRODUCT
-        LDPC_decode (ldpc_d, bpsk_symbols, num_bytes*8, decoding.ldpc, &num_iters);
+        LDPC_decode (ldpc_d, bpsk_symbols, decoding.ldpc, &num_iters);
         #else
         LDPC_decode (ldpc_d, quantized_symbols, decoding.ldpc, &num_iters);
         #endif
@@ -266,4 +266,62 @@ float find_bit_error_rate (uint8_t msg_len, float noise_stddev) {
     }
 
     return (float)bit_errors/num_transmissions;
+}
+
+float find_packet_error_rate_lf (float noise_stddev) {
+    uint32_t num_transmissions = 0;
+    uint32_t packet_errors = 0;
+    
+    while (num_transmissions < MAX_TRANSMISSIONS_LF && packet_errors < TARGET_ERRORS) {
+        static float bpsk_symbols[32];
+        static ldpc_quantized_t quantized_symbols[32];
+
+        uint8_t msg = rand_u8_range(1, 0x3F);
+        uint32_t lf_e = len_field_encode(msg);
+
+        bytes_to_bpsk((uint8_t *)&lf_e, 4, bpsk_symbols);
+        add_awgn(bpsk_symbols, 32, noise_stddev);
+        
+        uint32_t lf_d = 0;
+        for (int i = 0; i < 32; i++) {
+            lf_d |= (bpsk_symbols[i] < 0) << i;
+        }
+
+        lf_d = len_field_decode(lf_d);
+
+        if ((lf_e ^ lf_d) != 0) {
+            packet_errors++;
+        }
+
+        num_transmissions++;
+    }
+
+    return (float)packet_errors/num_transmissions;
+}
+
+float find_packet_error_rate_lf_soft (float noise_stddev) {
+    uint32_t num_transmissions = 0;
+    uint32_t packet_errors = 0;
+    
+    while (num_transmissions < MAX_TRANSMISSIONS_LF && packet_errors < TARGET_ERRORS) {
+        static float bpsk_symbols[32];
+        static ldpc_quantized_t quantized_symbols[32];
+
+        uint8_t msg = rand_u8_range(1, 0x3F);
+        uint32_t lf_e = len_field_encode(msg);
+
+        bytes_to_bpsk((uint8_t *)&lf_e, 4, bpsk_symbols);
+        add_awgn(bpsk_symbols, 32, noise_stddev);
+        quantize(bpsk_symbols, 32, quantized_symbols);
+
+        uint32_t lf_d = len_field_decode_soft(quantized_symbols);
+
+        if ((lf_e ^ lf_d) != 0) {
+            packet_errors++;
+        }
+
+        num_transmissions++;
+    }
+
+    return (float)packet_errors/num_transmissions;
 }

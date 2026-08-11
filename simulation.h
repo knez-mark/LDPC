@@ -21,6 +21,7 @@ typedef struct {
 #define USE_FULL_PCM false
 
 #define MAX_TRANSMISSIONS 100000000
+#define MAX_TRANSMISSIONS_LF 10000000
 #define TARGET_ERRORS 1000
 #define LDPC_NUM_ITERS 5
 
@@ -31,5 +32,7 @@ uint16_t bytes_to_bpsk(const uint8_t *bytes, uint16_t num_bytes, float* symbols)
 void add_awgn(float *symbols, uint16_t len, float noise_stddev);
 
 float find_bit_error_rate (uint8_t msg_len, float noise_stddev);
+float find_packet_error_rate_lf (float noise_stddev);
+float find_packet_error_rate_lf_soft (float noise_stddev);
 
 #endif /* SIMULATION_H_ */
